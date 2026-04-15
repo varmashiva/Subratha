@@ -4,7 +4,7 @@ import { Mail } from 'lucide-react';
 const GoogleLoginButton = () => {
   const handleGoogleLogin = () => {
     // Redirect to backend OAuth route
-    window.location.href = 'http://localhost:5001/api/auth/google';
+    window.location.href = 'https://subratha.onrender.com/api/auth/google';
   };
 
   return (

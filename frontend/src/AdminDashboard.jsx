@@ -6,15 +6,15 @@ import {
 } from 'lucide-react';
 
 // API Config
-const API_URL = 'http://localhost:5001/api';
+const API_URL = 'https://subratha.onrender.com/api';
 
 // ─── HELPERS ───────────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const colorMap = {
-    pending:    { bg: 'rgba(243,156,18,.15)',  color: '#f39c12', border: '#f39c12' },
-    picked:     { bg: 'rgba(41,128,185,.15)',  color: '#3498db', border: '#2980b9' },
-    processing: { bg: 'rgba(155,89,182,.15)',  color: '#9b59b6', border: '#8e44ad' },
-    delivered:  { bg: 'rgba(39,174,96,.15)',   color: '#2ecc71', border: '#27ae60' },
+    pending: { bg: 'rgba(243,156,18,.15)', color: '#f39c12', border: '#f39c12' },
+    picked: { bg: 'rgba(41,128,185,.15)', color: '#3498db', border: '#2980b9' },
+    processing: { bg: 'rgba(155,89,182,.15)', color: '#9b59b6', border: '#8e44ad' },
+    delivered: { bg: 'rgba(39,174,96,.15)', color: '#2ecc71', border: '#27ae60' },
   };
   const s = colorMap[status] || colorMap.pending;
   return (
@@ -46,7 +46,7 @@ function Modal({ isOpen, onClose, title, children }) {
 
 function OrdersTab() {
   const [orders, setOrders] = useState([]);
-  const [editing, setEditing] = useState(null); 
+  const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -100,7 +100,7 @@ function OrdersTab() {
           <tbody>
             {filtered.map(o => (
               <tr key={o._id}>
-                <td style={{ fontSize: '0.75rem', opacity: 0.6 }}>{o._id.substring(0,8)}</td>
+                <td style={{ fontSize: '0.75rem', opacity: 0.6 }}>{o._id.substring(0, 8)}</td>
                 <td>
                   <div style={{ fontWeight: 600 }}>{o.user?.name || 'Guest'}</div>
                   <div style={{ fontSize: '0.75rem', opacity: 0.5 }}>{o.user?.email}</div>
@@ -133,11 +133,11 @@ function PricingTab() {
   const [services, setServices] = useState([]);
   const [products, setProducts] = useState([]);
   const [expandedSvc, setExpandedSvc] = useState(null);
-  
+
   // Modals state
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
-  
+
   // Forms
   const [svcForm, setSvcForm] = useState({ name: '', unit: 'per kg', type: 'Global', basePrice: 0 });
   const [prodForm, setProdForm] = useState({ name: '', price: '', serviceName: '' });
@@ -229,26 +229,26 @@ function PricingTab() {
         const svcProducts = getProductsForService(svc.name);
 
         return (
-          <div key={svc._id} className={`b2b-card hierarchy-card ${isExp ? 'expanded' : ''}`} style={{ 
-            background: '#fff', 
-            padding: '0', 
-            overflow: 'hidden', 
+          <div key={svc._id} className={`b2b-card hierarchy-card ${isExp ? 'expanded' : ''}`} style={{
+            background: '#fff',
+            padding: '0',
+            overflow: 'hidden',
             transition: 'all 0.3s ease',
             border: isExp ? '2px solid #5b3e84' : '1px solid rgba(0,0,0,0.05)',
             boxShadow: isExp ? '0 10px 30px rgba(91, 62, 132, 0.1)' : '0 2px 10px rgba(0,0,0,0.02)'
           }}>
             {/* Header */}
-            <div style={{ 
-              padding: '1.5rem', 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
+            <div style={{
+              padding: '1.5rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
               cursor: svc.type === 'Product-based' ? 'pointer' : 'default',
               background: isExp ? 'rgba(91, 62, 132, 0.02)' : 'transparent'
             }} onClick={() => svc.type === 'Product-based' && setExpandedSvc(isExp ? null : svc._id)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ 
-                  width: '40px', height: '40px', borderRadius: '10px', 
+                <div style={{
+                  width: '40px', height: '40px', borderRadius: '10px',
                   background: svc.type === 'Global' ? '#e1f5fe' : '#f3e5f5',
                   color: svc.type === 'Global' ? '#0288d1' : '#7b1fa2',
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
@@ -272,7 +272,7 @@ function PricingTab() {
                     <div style={{ fontWeight: 700, fontSize: '1.2rem', color: '#5b3e84' }}>₹{svc.basePrice}</div>
                   </div>
                 )}
-                
+
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button className="adm-icon-btn" onClick={(e) => { e.stopPropagation(); setEditingSvcId(svc._id); setSvcForm(svc); setShowServiceModal(true); }}><Edit2 size={16} /></button>
                   <button className="adm-icon-btn danger" onClick={(e) => { e.stopPropagation(); deleteService(svc._id); }}><Trash2 size={16} /></button>
@@ -287,8 +287,8 @@ function PricingTab() {
 
             {/* Nested Products */}
             {isExp && (
-              <div style={{ 
-                padding: '0 1.5rem 1.5rem 1.5rem', 
+              <div style={{
+                padding: '0 1.5rem 1.5rem 1.5rem',
                 borderTop: '1px dashed rgba(91, 62, 132, 0.1)',
                 background: '#faf9fc',
                 animation: 'slideDown 0.3s ease'
@@ -334,19 +334,19 @@ function PricingTab() {
         <div className="auth-form" style={{ gap: '1rem' }}>
           <div className="input-group">
             <label className="form-label">Service Name</label>
-            <input className="input-field" value={svcForm.name} onChange={e => setSvcForm({...svcForm, name: e.target.value})} placeholder="e.g. Wash & Fold" />
+            <input className="input-field" value={svcForm.name} onChange={e => setSvcForm({ ...svcForm, name: e.target.value })} placeholder="e.g. Wash & Fold" />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div className="input-group">
               <label className="form-label">Unit</label>
-              <select className="input-field" value={svcForm.unit} onChange={e => setSvcForm({...svcForm, unit: e.target.value})}>
+              <select className="input-field" value={svcForm.unit} onChange={e => setSvcForm({ ...svcForm, unit: e.target.value })}>
                 <option value="per kg">per kg</option>
                 <option value="per piece">per piece</option>
               </select>
             </div>
             <div className="input-group">
               <label className="form-label">Type</label>
-              <select className="input-field" value={svcForm.type} onChange={e => setSvcForm({...svcForm, type: e.target.value})}>
+              <select className="input-field" value={svcForm.type} onChange={e => setSvcForm({ ...svcForm, type: e.target.value })}>
                 <option value="Global">Global Service</option>
                 <option value="Product-based">Product-based</option>
               </select>
@@ -355,7 +355,7 @@ function PricingTab() {
           {svcForm.type === 'Global' && (
             <div className="input-group">
               <label className="form-label">Base Price (per kg)</label>
-              <input type="number" className="input-field" value={svcForm.basePrice} onChange={e => setSvcForm({...svcForm, basePrice: e.target.value})} />
+              <input type="number" className="input-field" value={svcForm.basePrice} onChange={e => setSvcForm({ ...svcForm, basePrice: e.target.value })} />
             </div>
           )}
           <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} onClick={saveService}>Commit Service</button>
@@ -367,11 +367,11 @@ function PricingTab() {
         <div className="auth-form" style={{ gap: '1rem' }}>
           <div className="input-group">
             <label className="form-label">Product Name</label>
-            <input className="input-field" value={prodForm.name} onChange={e => setProdForm({...prodForm, name: e.target.value})} placeholder="e.g. Silk Saree" />
+            <input className="input-field" value={prodForm.name} onChange={e => setProdForm({ ...prodForm, name: e.target.value })} placeholder="e.g. Silk Saree" />
           </div>
           <div className="input-group">
             <label className="form-label">Price per Piece (₹)</label>
-            <input type="number" className="input-field" value={prodForm.price} onChange={e => setProdForm({...prodForm, price: e.target.value})} placeholder="0.00" />
+            <input type="number" className="input-field" value={prodForm.price} onChange={e => setProdForm({ ...prodForm, price: e.target.value })} placeholder="0.00" />
           </div>
           <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} onClick={saveProduct}>Save Mapping</button>
         </div>
@@ -393,9 +393,9 @@ function HotelsTab() {
 
 // ─── MAIN ADMIN DASHBOARD ───────────────────────────────────────────────────────
 const TABS = [
-  { id: 'orders',  label: 'Orders Desk', Icon: Package },
+  { id: 'orders', label: 'Orders Desk', Icon: Package },
   { id: 'pricing', label: 'Pricing Engine', Icon: Settings },
-  { id: 'hotels',  label: 'B2B Hub', Icon: Hotel },
+  { id: 'hotels', label: 'B2B Hub', Icon: Hotel },
 ];
 
 export default function AdminDashboard({ onLogout }) {
@@ -426,9 +426,9 @@ export default function AdminDashboard({ onLogout }) {
         </header>
 
         <div className="b2b-content fade-in" key={activeTab} style={{ padding: '0 3rem 3rem' }}>
-          {activeTab === 'orders'  && <OrdersTab />}
+          {activeTab === 'orders' && <OrdersTab />}
           {activeTab === 'pricing' && <PricingTab />}
-          {activeTab === 'hotels'  && <HotelsTab />}
+          {activeTab === 'hotels' && <HotelsTab />}
         </div>
       </main>
     </div>

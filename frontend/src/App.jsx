@@ -15,7 +15,7 @@ function App() {
   const [isAdminPortal, setIsAdminPortal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [globalScrollProgress, setGlobalScrollProgress] = useState(0);
-  
+
   // Order Flow State
   const [isOrdering, setIsOrdering] = useState(false);
   const [orderStep, setOrderStep] = useState(1);
@@ -31,8 +31,8 @@ function App() {
   const fetchProducts = async () => {
     try {
       const [pRes, sRes] = await Promise.all([
-        axios.get('http://localhost:5001/api/products'),
-        axios.get('http://localhost:5001/api/services')
+        axios.get('https://subratha.onrender.com/api/products'),
+        axios.get('https://subratha.onrender.com/api/services')
       ]);
       setProducts(pRes.data);
       setGlobalServices(sRes.data.filter(s => s.type === 'Global'));
@@ -44,7 +44,7 @@ function App() {
   // Persistent Auth Check
   const checkAuthStatus = async () => {
     try {
-      const { data } = await axios.get('http://localhost:5001/api/auth/me', { withCredentials: true });
+      const { data } = await axios.get('https://subratha.onrender.com/api/auth/me', { withCredentials: true });
       if (data.user) {
         setIsAuthenticated(true);
         setUser({
@@ -62,7 +62,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await axios.get('http://localhost:5001/api/auth/logout', { withCredentials: true });
+      await axios.get('https://subratha.onrender.com/api/auth/logout', { withCredentials: true });
     } catch (err) {
       console.error('Logout error', err);
     }
@@ -86,7 +86,7 @@ function App() {
         time: orderDetails.time,
         totalAmount
       };
-      const response = await axios.post('http://localhost:5001/api/orders', payload, { withCredentials: true });
+      const response = await axios.post('https://subratha.onrender.com/api/orders', payload, { withCredentials: true });
       if (response.data.success) {
         alert(`Success! Our concierge will arrive for your pickup during ${orderDetails.time}. Total Amount: ₹${totalAmount}`);
         setIsOrdering(false);
@@ -117,7 +117,7 @@ function App() {
 
   const handleGoogleLogin = () => {
     // Redirect to the backend OAuth route
-    window.location.href = 'http://localhost:5001/api/auth/google';
+    window.location.href = 'https://subratha.onrender.com/api/auth/google';
   };
 
   const storyRef = React.useRef(null);
@@ -152,7 +152,7 @@ function App() {
       if (storyRef.current) {
         const rect = storyRef.current.getBoundingClientRect();
         const scrollProgress = -rect.top / (rect.height - window.innerHeight);
-        
+
         if (scrollProgress < 0.25) setActiveStep(1);
         else if (scrollProgress < 0.5) setActiveStep(2);
         else if (scrollProgress < 0.75) setActiveStep(3);
@@ -166,7 +166,7 @@ function App() {
           Math.max((window.innerHeight - rect.top) / rect.height, 0),
           1
         );
-        
+
         setWorksScrollProgress(progress);
 
         let step = Math.floor(progress * 5);
@@ -212,22 +212,22 @@ function App() {
             ) : (
               <div className={`user-profile ${showProfileDropdown ? 'active' : ''}`} onClick={() => setShowProfileDropdown(!showProfileDropdown)}>
                 <div className="user-avatar">
-                   {user?.picture ? (
-                     <img src={user.picture} alt={user.name} />
-                   ) : (
-                     user?.name ? user.name.charAt(0).toUpperCase() : 'S'
-                   )}
+                  {user?.picture ? (
+                    <img src={user.picture} alt={user.name} />
+                  ) : (
+                    user?.name ? user.name.charAt(0).toUpperCase() : 'S'
+                  )}
                 </div>
-                
+
                 {showProfileDropdown && (
                   <div className="dropdown-menu">
                     {user?.role === 'admin' && (
-                      <button 
-                        className="dropdown-item" 
+                      <button
+                        className="dropdown-item"
                         style={{ color: 'var(--color-primary)', fontWeight: '600' }}
                         onClick={() => { setIsAdminPortal(true); setShowProfileDropdown(false); }}
                       >
-                         ⚙ Admin Dashboard
+                        ⚙ Admin Dashboard
                       </button>
                     )}
                     <button className="dropdown-item">
@@ -290,49 +290,49 @@ function App() {
       {!isOrdering ? (
         <>
           <main className="hero-wrapper fade-in" style={{ animationDelay: '0.2s' }}>
-              <video 
-                className="hero-video-mobile"
-                autoPlay 
-                muted 
-                loop 
-                playsInline
-                preload="metadata"
-              >
-                <source src="/images/mobile_land.mov" type="video/mp4" />
-                <source src="/images/mobile_land.mov" type="video/quicktime" />
-              </video>
-              <div className="hero-content">
-                <div className="hero-glass-box">
-                  <h1 className="reveal-text">
-                    <span className="reveal-text-inner" style={{ animationDelay: '0.4s' }}>Subratha</span>
-                    <span className="reveal-text-inner" style={{ animationDelay: '0.6s' }}>Concierge</span>
-                  </h1>
-                  
-                  <div className="hero-separator fade-in" style={{ animationDelay: '0.8s' }}></div>
-                  
-                  <div className="hero-meta fade-in" style={{ animationDelay: '0.9s' }}>
-                     <span className="dot"></span>
-                     <span className="letter-animation">
-                       {"Service 01/04".split('').map((char, i) => (
-                         <span key={i} className={`stagger-${(i % 5) + 1}`} style={{ animationDelay: `${1.0 + (i * 0.05)}s` }}>{char === ' ' ? '\u00A0' : char}</span>
-                       ))}
-                     </span>
-                  </div>
-                  
-                  <p className="hero-subtext fade-in" style={{ animationDelay: '1.2s' }}>
-                     A premium wardrobe care community with professional handling and door-to-door concierge service.
-                  </p>
-                  
-                  <div className="hero-actions fade-in" style={{ animationDelay: '0.8s' }}>
-                    <button 
-                      className="btn btn-primary" 
-                      onClick={() => handleAction(true)}
-                    >
-                      Schedule Pickup
-                    </button>
-                  </div>
+            <video
+              className="hero-video-mobile"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+            >
+              <source src="/images/mobile_land.mov" type="video/mp4" />
+              <source src="/images/mobile_land.mov" type="video/quicktime" />
+            </video>
+            <div className="hero-content">
+              <div className="hero-glass-box">
+                <h1 className="reveal-text">
+                  <span className="reveal-text-inner" style={{ animationDelay: '0.4s' }}>Subratha</span>
+                  <span className="reveal-text-inner" style={{ animationDelay: '0.6s' }}>Concierge</span>
+                </h1>
+
+                <div className="hero-separator fade-in" style={{ animationDelay: '0.8s' }}></div>
+
+                <div className="hero-meta fade-in" style={{ animationDelay: '0.9s' }}>
+                  <span className="dot"></span>
+                  <span className="letter-animation">
+                    {"Service 01/04".split('').map((char, i) => (
+                      <span key={i} className={`stagger-${(i % 5) + 1}`} style={{ animationDelay: `${1.0 + (i * 0.05)}s` }}>{char === ' ' ? '\u00A0' : char}</span>
+                    ))}
+                  </span>
+                </div>
+
+                <p className="hero-subtext fade-in" style={{ animationDelay: '1.2s' }}>
+                  A premium wardrobe care community with professional handling and door-to-door concierge service.
+                </p>
+
+                <div className="hero-actions fade-in" style={{ animationDelay: '0.8s' }}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => handleAction(true)}
+                  >
+                    Schedule Pickup
+                  </button>
                 </div>
               </div>
+            </div>
           </main>
 
           {/* Storytelling Section */}
@@ -346,7 +346,7 @@ function App() {
                     </h2>
                   ))}
                 </div>
-                
+
                 <div className="story-right">
                   {[
                     {
@@ -386,8 +386,8 @@ function App() {
                       </div>
                       <p className="story-description">{s.desc}</p>
                       <div className="story-actions">
-                        <button 
-                          className="btn btn-primary" 
+                        <button
+                          className="btn btn-primary"
                           onClick={() => handleAction(true)}
                         >
                           Schedule Pickup
@@ -468,7 +468,7 @@ function App() {
                             </div>
                             {index !== arr.length - 1 && (
                               <div className="timeline-line-wrapper">
-                                 <div className="timeline-line-progress" style={{ height: isPast ? '100%' : '0%' }}></div>
+                                <div className="timeline-line-progress" style={{ height: isPast ? '100%' : '0%' }}></div>
                               </div>
                             )}
                           </div>
@@ -490,9 +490,9 @@ function App() {
                       "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=1000"
                     ].map((src, idx) => (
                       <div key={idx} className={`works-image-wrapper ${activeWorksStep === idx ? 'active' : ''}`}>
-                        <img 
-                          src={src} 
-                          alt={`Step ${idx + 1}`} 
+                        <img
+                          src={src}
+                          alt={`Step ${idx + 1}`}
                           style={{ transform: `translateY(${(worksScrollProgress - 0.5) * -12}%)` }}
                         />
                       </div>
@@ -511,7 +511,7 @@ function App() {
             <span className="navbar-brand">Subratha</span>
           </div>
           <h2 style={{ textAlign: 'center', marginBottom: 'var(--space-lg)', fontSize: 'clamp(1.5rem, 5vw, 2.25rem)' }}>Schedule Premium Service</h2>
-          
+
           <div className="stepper-container">
             <div className="stepper-line"></div>
             <div className="stepper-progress" style={{ width: `${((orderStep - 1) / 3) * 100}%` }}></div>
@@ -533,25 +533,25 @@ function App() {
               <div className="fade-in">
                 <h3>Add Laundry Items</h3>
                 <div className="tab-switcher" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-                  <button 
+                  <button
                     onClick={() => { setIsKgBased(false); setSelectedService(null); setSelectedProduct(null); }}
                     style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: 'none', background: !isKgBased ? 'var(--color-primary)' : 'rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontWeight: '600' }}
                   >By Item</button>
-                  <button 
+                  <button
                     onClick={() => { setIsKgBased(true); setSelectedService(null); setSelectedProduct(null); }}
                     style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: 'none', background: isKgBased ? 'var(--color-primary)' : 'rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', fontWeight: '600' }}
                   >By Weight (KG)</button>
                 </div>
 
-                <div className="order-item-builder" style={{ 
-                  background: 'rgba(255, 255, 255, 0.05)', 
-                  padding: '1.5rem', 
+                <div className="order-item-builder" style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  padding: '1.5rem',
                   borderRadius: 'var(--radius-md)',
                   marginBottom: '2rem',
                   border: '1px solid var(--color-border)'
                 }}>
-                  <div className="form-grid" style={{ 
-                    display: 'grid', 
+                  <div className="form-grid" style={{
+                    display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                     gap: '1rem',
                     marginBottom: '1.5rem'
@@ -560,10 +560,10 @@ function App() {
                       <>
                         <div className="input-group">
                           <label className="form-label" style={{ color: '#b6a3ce' }}>Product</label>
-                          <select 
-                            className="form-input" 
+                          <select
+                            className="form-input"
                             style={{ height: '50px', background: '#5b3e84', color: '#f5f2f8' }}
-                            value={selectedProduct?._id || ''} 
+                            value={selectedProduct?._id || ''}
                             onChange={(e) => {
                               const p = products.find(prod => prod._id === e.target.value);
                               setSelectedProduct(p);
@@ -577,8 +577,8 @@ function App() {
 
                         <div className="input-group">
                           <label className="form-label" style={{ color: '#b6a3ce' }}>Service</label>
-                          <select 
-                            className="form-input" 
+                          <select
+                            className="form-input"
                             style={{ height: '50px', background: '#5b3e84', color: '#f5f2f8' }}
                             disabled={!selectedProduct}
                             value={selectedService?.name || ''}
@@ -594,12 +594,12 @@ function App() {
 
                         <div className="input-group">
                           <label className="form-label" style={{ color: '#b6a3ce' }}>Quantity</label>
-                          <input 
-                            type="number" 
-                            className="form-input" 
+                          <input
+                            type="number"
+                            className="form-input"
                             style={{ height: '50px', background: '#5b3e84', color: '#f5f2f8' }}
-                            min="1" 
-                            value={quantity} 
+                            min="1"
+                            value={quantity}
                             onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
                           />
                         </div>
@@ -608,8 +608,8 @@ function App() {
                       <>
                         <div className="input-group">
                           <label className="form-label" style={{ color: '#b6a3ce' }}>Service</label>
-                          <select 
-                            className="form-input" 
+                          <select
+                            className="form-input"
                             style={{ height: '50px', background: '#5b3e84', color: '#f5f2f8' }}
                             value={selectedService?.name || ''}
                             onChange={(e) => {
@@ -624,13 +624,13 @@ function App() {
 
                         <div className="input-group">
                           <label className="form-label" style={{ color: '#b6a3ce' }}>Weight (approx kg)</label>
-                          <input 
-                            type="number" 
-                            className="form-input" 
+                          <input
+                            type="number"
+                            className="form-input"
                             style={{ height: '50px', background: '#5b3e84', color: '#f5f2f8' }}
-                            min="1" 
+                            min="1"
                             step="0.5"
-                            value={weight} 
+                            value={weight}
                             onChange={(e) => setWeight(parseFloat(e.target.value) || 1)}
                           />
                         </div>
@@ -646,8 +646,8 @@ function App() {
                     </div>
                   )}
 
-                  <button 
-                    className="btn btn-primary" 
+                  <button
+                    className="btn btn-primary"
                     style={{ width: '100%', borderRadius: 'var(--radius-md)' }}
                     disabled={(!selectedProduct && !isKgBased) || !selectedService}
                     onClick={() => {
@@ -689,13 +689,13 @@ function App() {
                         <tbody>
                           {cart.map(item => (
                             <tr key={item.id} style={{ borderBottom: '1px solid rgba(91, 62, 132, 0.1)' }}>
-                               <td style={{ padding: '1rem' }}>{item.product}</td>
+                              <td style={{ padding: '1rem' }}>{item.product}</td>
                               <td style={{ padding: '1rem' }}>{item.service}</td>
                               <td style={{ padding: '1rem', textAlign: 'center' }}>{item.quantity} {item.unit || 'pcs'}</td>
                               <td style={{ padding: '1rem', textAlign: 'right' }}>₹{item.price}/{item.unit === 'kg' ? 'kg' : 'pc'}</td>
                               <td style={{ padding: '1rem', textAlign: 'right' }}>₹{item.total}</td>
                               <td style={{ padding: '1rem', textAlign: 'center' }}>
-                                <button 
+                                <button
                                   onClick={() => setCart(cart.filter(i => i.id !== item.id))}
                                   style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer' }}
                                 >
@@ -718,71 +718,71 @@ function App() {
                 )}
               </div>
             )}
-            
+
             {orderStep === 2 && (
-               <div className="fade-in">
-                 <h3>Pickup Address</h3>
-                 <div className="input-group" style={{ marginBottom: '1rem' }}>
-                   <label className="form-label">Street Address</label>
-                   <textarea className="form-input" style={{ minHeight: '120px' }} value={orderDetails.address} onChange={(e) => setOrderDetails({...orderDetails, address: e.target.value})} placeholder="Enter your full pickup & delivery address..." />
-                 </div>
-               </div>
+              <div className="fade-in">
+                <h3>Pickup Address</h3>
+                <div className="input-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Street Address</label>
+                  <textarea className="form-input" style={{ minHeight: '120px' }} value={orderDetails.address} onChange={(e) => setOrderDetails({ ...orderDetails, address: e.target.value })} placeholder="Enter your full pickup & delivery address..." />
+                </div>
+              </div>
             )}
 
             {orderStep === 3 && (
-               <div className="fade-in">
-                 <h3>Choose Pickup Time</h3>
-                 <div className="options-grid">
-                   {['Morning (9 AM - 12 PM)', 'Afternoon (12 PM - 4 PM)', 'Evening (4 PM - 8 PM)'].map(t => (
-                      <div key={t} className={`option-card ${orderDetails.time === t ? 'selected' : ''}`} onClick={() => setOrderDetails({...orderDetails, time: t})}>
-                         <div className="option-icon"><Clock size={32} style={{ margin: '0 auto' }}/></div>
-                         <h4 style={{ fontSize: '1rem', lineHeight: '1.4' }}>{t}</h4>
-                      </div>
-                   ))}
-                 </div>
-               </div>
+              <div className="fade-in">
+                <h3>Choose Pickup Time</h3>
+                <div className="options-grid">
+                  {['Morning (9 AM - 12 PM)', 'Afternoon (12 PM - 4 PM)', 'Evening (4 PM - 8 PM)'].map(t => (
+                    <div key={t} className={`option-card ${orderDetails.time === t ? 'selected' : ''}`} onClick={() => setOrderDetails({ ...orderDetails, time: t })}>
+                      <div className="option-icon"><Clock size={32} style={{ margin: '0 auto' }} /></div>
+                      <h4 style={{ fontSize: '1rem', lineHeight: '1.4' }}>{t}</h4>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
             {orderStep === 4 && (
-               <div className="fade-in">
-                 <h3>Review Your Order</h3>
-                 <div className="summary-details">
-                    <div className="summary-row">
-                      <span className="summary-label">Items</span>
-                      <span className="summary-value" style={{ textAlign: "right" }}>{cart.length} item(s)</span>
-                    </div>
-                    <div className="summary-row" style={{ borderTop: "1px solid var(--color-border)", paddingTop: "0.5rem", marginTop: "0.5rem", fontWeight: "bold" }}>
-                      <span className="summary-label">Grand Total</span>
-                      <span className="summary-value">₹{calculateTotal()}</span>
-                    </div>
-                   <div className="summary-row">
-                     <span className="summary-label">Address</span>
-                     <span className="summary-value" style={{ textAlign: 'right', maxWidth: '60%' }}>{orderDetails.address}</span>
-                   </div>
-                   <div className="summary-row">
-                     <span className="summary-label">Pickup Time</span>
-                     <span className="summary-value">{orderDetails.time}</span>
-                   </div>
-                 </div>
-               </div>
+              <div className="fade-in">
+                <h3>Review Your Order</h3>
+                <div className="summary-details">
+                  <div className="summary-row">
+                    <span className="summary-label">Items</span>
+                    <span className="summary-value" style={{ textAlign: "right" }}>{cart.length} item(s)</span>
+                  </div>
+                  <div className="summary-row" style={{ borderTop: "1px solid var(--color-border)", paddingTop: "0.5rem", marginTop: "0.5rem", fontWeight: "bold" }}>
+                    <span className="summary-label">Grand Total</span>
+                    <span className="summary-value">₹{calculateTotal()}</span>
+                  </div>
+                  <div className="summary-row">
+                    <span className="summary-label">Address</span>
+                    <span className="summary-value" style={{ textAlign: 'right', maxWidth: '60%' }}>{orderDetails.address}</span>
+                  </div>
+                  <div className="summary-row">
+                    <span className="summary-label">Pickup Time</span>
+                    <span className="summary-value">{orderDetails.time}</span>
+                  </div>
+                </div>
+              </div>
             )}
 
             <div className="order-actions">
-               {orderStep > 1 ? (
-                 <button className="btn btn-secondary" style={{ padding: '0.8rem 2rem' }} onClick={() => setOrderStep(orderStep - 1)}>Back</button>
-               ) : (
-                 <button className="btn btn-secondary" style={{ padding: '0.8rem 2rem' }} onClick={() => setIsOrdering(false)}>Cancel</button>
-               )}
-               
-               {orderStep < 4 ? (
-                 <button className="btn btn-primary" style={{ padding: '0.8rem 2rem' }} onClick={() => setOrderStep(orderStep + 1)} disabled={
-                   (orderStep===1 && cart.length === 0) ||
-                   (orderStep===2 && !orderDetails.address.trim()) ||
-                   (orderStep===3 && !orderDetails.time)
-                 }>Next Step</button>
-               ) : (
-                 <button className="btn btn-primary" style={{ padding: '0.8rem 2rem' }} onClick={handleOrderSubmit}>Confirm Order</button>
-               )}
+              {orderStep > 1 ? (
+                <button className="btn btn-secondary" style={{ padding: '0.8rem 2rem' }} onClick={() => setOrderStep(orderStep - 1)}>Back</button>
+              ) : (
+                <button className="btn btn-secondary" style={{ padding: '0.8rem 2rem' }} onClick={() => setIsOrdering(false)}>Cancel</button>
+              )}
+
+              {orderStep < 4 ? (
+                <button className="btn btn-primary" style={{ padding: '0.8rem 2rem' }} onClick={() => setOrderStep(orderStep + 1)} disabled={
+                  (orderStep === 1 && cart.length === 0) ||
+                  (orderStep === 2 && !orderDetails.address.trim()) ||
+                  (orderStep === 3 && !orderDetails.time)
+                }>Next Step</button>
+              ) : (
+                <button className="btn btn-primary" style={{ padding: '0.8rem 2rem' }} onClick={handleOrderSubmit}>Confirm Order</button>
+              )}
             </div>
           </div>
         </main>
@@ -823,8 +823,8 @@ function App() {
       {/* Auth Modal */}
       {showAuthModal && (
         <div className="modal-overlay" onClick={() => setShowAuthModal(false)}>
-          <div 
-            className="modal-content" 
+          <div
+            className="modal-content"
             onClick={(e) => e.stopPropagation()}
             style={{ textAlign: 'center' }}
           >
@@ -843,10 +843,10 @@ function App() {
             <div className="auth-form">
               <button className="google-btn" onClick={handleGoogleLogin}>
                 <svg width="20" height="20" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
                 {isSignup ? 'Sign up with Google' : 'Continue with Google'}
               </button>
@@ -870,12 +870,12 @@ function App() {
                 </button>
               </form>
             </div>
-            
+
             <p style={{ fontSize: '0.85rem', marginTop: 'var(--space-md)' }}>
               {isSignup ? 'Already have an account? ' : "Don't have an account? "}
-              <a 
-                href="#" 
-                onClick={(e) => { e.preventDefault(); setIsSignup(!isSignup); }} 
+              <a
+                href="#"
+                onClick={(e) => { e.preventDefault(); setIsSignup(!isSignup); }}
                 style={{ color: 'var(--color-primary)', fontWeight: '600' }}
               >
                 {isSignup ? 'Sign In' : 'Create one'}
@@ -893,12 +893,12 @@ function App() {
         title="Chat with us on WhatsApp"
       >
         <svg viewBox="0 0 24 24" fill="currentColor">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
         </svg>
       </a>
 
       {/* Floating Mobile Menu Button */}
-      <button 
+      <button
         className="mobile-menu-btn"
         onClick={() => setShowMobileMenu(!showMobileMenu)}
       >
@@ -906,11 +906,11 @@ function App() {
           <Menu size={24} />
           <svg className="menu-circle-svg" viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="45" className="menu-circle-bg" />
-            <circle 
-              cx="50" cy="50" r="45" 
-              className="menu-circle-stroke" 
-              style={{ 
-                strokeDashoffset: 283 - (283 * globalScrollProgress / 100) 
+            <circle
+              cx="50" cy="50" r="45"
+              className="menu-circle-stroke"
+              style={{
+                strokeDashoffset: 283 - (283 * globalScrollProgress / 100)
               }}
             />
           </svg>

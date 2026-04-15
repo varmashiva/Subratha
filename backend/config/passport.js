@@ -10,7 +10,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: 'http://localhost:5001/api/auth/google/callback', 
+      callbackURL: 'https://subratha.onrender.com/api/auth/google/callback',
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -18,7 +18,7 @@ passport.use(
         const email = emails[0].value;
         const picture = photos[0].value;
 
-        let user = await User.findOne({ 
+        let user = await User.findOne({
           $or: [
             { googleId: id },
             { email: email }
@@ -30,7 +30,7 @@ passport.use(
           'hello@subratha.com',
           'shivavarma336@gmail.com'
         ];
-        
+
         const role = adminEmails.includes(email.toLowerCase()) ? 'admin' : 'user';
 
         if (user) {
