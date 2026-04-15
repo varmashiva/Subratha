@@ -25,8 +25,21 @@ mongoose.connect(MONGO_URI)
   .catch((err) => console.error('❌ MongoDB Connection Error:', err));
 
 // Middleware
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://subratha.com',
+  'https://www.subratha.com',
+  'https://subratha.onrender.com'
+];
+
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json());

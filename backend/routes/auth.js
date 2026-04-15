@@ -21,8 +21,9 @@ const sendToken = (user, res) => {
     sameSite: 'lax',
   });
 
+  const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://subratha.com' : 'http://localhost:5173');
   // Redirect back to frontend with a flag
-  res.redirect(`http://localhost:5173/?auth_success=true`);
+  res.redirect(`${frontendUrl}/?auth_success=true`);
 };
 
 // Initial Google OAuth route
@@ -34,13 +35,17 @@ router.get(
 // Callback route
 router.get(
   '/google/callback',
-  passport.authenticate('google', { failureRedirect: 'http://localhost:5173/login?error=auth_failed', session: false }),
+  (req, res, next) => {
+    const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://subratha.com' : 'http://localhost:5173');
+    passport.authenticate('google', { failureRedirect: `${frontendUrl}/login?error=auth_failed`, session: false })(req, res, next);
+  },
   (req, res) => {
+    const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://subratha.com' : 'http://localhost:5173');
     // On success
     if (req.user) {
       sendToken(req.user, res);
     } else {
-      res.redirect('http://localhost:5173/login?error=no_user');
+      res.redirect(`${frontendUrl}/login?error=no_user`);
     }
   }
 );
