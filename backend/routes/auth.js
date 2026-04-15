@@ -37,7 +37,7 @@ router.get(
   '/google/callback',
   (req, res, next) => {
     const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://subratha.com' : 'http://localhost:5173');
-    passport.authenticate('google', { failureRedirect: `${frontendUrl}/login?error=auth_failed`, session: false })(req, res, next);
+    passport.authenticate('google', { failureRedirect: `${frontendUrl}/?error=auth_failed`, session: false })(req, res, next);
   },
   (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://subratha.com' : 'http://localhost:5173');
@@ -45,7 +45,7 @@ router.get(
     if (req.user) {
       sendToken(req.user, res);
     } else {
-      res.redirect(`${frontendUrl}/login?error=no_user`);
+      res.redirect(`${frontendUrl}/?error=no_user`);
     }
   }
 );
