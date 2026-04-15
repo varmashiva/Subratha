@@ -22,8 +22,8 @@ const sendToken = (user, res) => {
   });
 
   const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://subratha.com' : 'http://localhost:5173');
-  // Redirect back to frontend with a flag
-  res.redirect(`${frontendUrl}/?auth_success=true`);
+  // Redirect back to frontend with a token and flag flag
+  res.redirect(`${frontendUrl}/?auth_success=true&token=${token}`);
 };
 
 // Initial Google OAuth route
@@ -50,9 +50,11 @@ router.get(
   }
 );
 
-// Get current user info from cookie
+// Get current user info from cookie or header
 router.get('/me', async (req, res) => {
-  const token = req.cookies.token;
+  const authHeader = req.headers.authorization;
+  const token = req.cookies.token || (authHeader && authHeader.split(' ')[1]);
+  
   if (!token) return res.status(401).json({ message: 'Not authenticated' });
 
   try {
