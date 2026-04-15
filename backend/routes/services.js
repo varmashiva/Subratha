@@ -5,7 +5,8 @@ import jwt from 'jsonwebtoken';
 const router = express.Router();
 
 const protect = async (req, res, next) => {
-  const token = req.cookies.token;
+  const authHeader = req.headers.authorization;
+  const token = req.cookies.token || (authHeader && authHeader.split(' ')[1]);
   if (!token) return res.status(401).json({ message: 'Not authenticated' });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);

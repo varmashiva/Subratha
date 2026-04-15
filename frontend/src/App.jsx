@@ -1,5 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+
+// Axios Interceptor to attach the token if available
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 import { X, LogIn, Mail, Waves, Shirt, Wind, Sparkles, Hotel, Zap, Tag, ShieldCheck, Award, Phone, MapPin, CheckCircle, Clock, User, Menu } from 'lucide-react';
 import './index.css';
 import HotelDashboard from './HotelDashboard';
@@ -66,6 +75,7 @@ function App() {
     } catch (err) {
       console.error('Logout error', err);
     }
+    localStorage.removeItem('token');
     setIsAuthenticated(false);
     setUser(null);
     setShowProfileDropdown(false);
@@ -127,6 +137,15 @@ function App() {
   const [worksScrollProgress, setWorksScrollProgress] = React.useState(0);
 
   React.useEffect(() => {
+    // Capture token from URL if redirected from OAuth
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    if (token) {
+      localStorage.setItem('token', token);
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     checkAuthStatus();
     fetchProducts();
   }, []);
