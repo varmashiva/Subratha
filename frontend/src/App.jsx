@@ -11,6 +11,7 @@ axios.interceptors.request.use((config) => {
 });
 import { X, LogIn, Mail, Waves, Shirt, Wind, Sparkles, Hotel, Zap, Tag, ShieldCheck, Award, Phone, MapPin, CheckCircle, Clock, User, Menu } from 'lucide-react';
 import './index.css';
+import { useNavigate, useLocation } from 'react-router-dom';
 import HotelDashboard from './HotelDashboard';
 import AdminDashboard from './AdminDashboard';
 
@@ -26,7 +27,13 @@ function App() {
   const [globalScrollProgress, setGlobalScrollProgress] = useState(0);
 
   // Order Flow State
-  const [isOrdering, setIsOrdering] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isOrdering = location.pathname === '/schedule';
+  const setIsOrdering = (value) => {
+    if (value) navigate('/schedule');
+    else navigate('/');
+  };
   const [orderStep, setOrderStep] = useState(1);
   const [products, setProducts] = useState([]); const [globalServices, setGlobalServices] = useState([]);
   const [cart, setCart] = useState([]);
