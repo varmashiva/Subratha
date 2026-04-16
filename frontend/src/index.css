@@ -104,8 +104,8 @@ p {
 }
 
 @keyframes titleReveal {
-  from { transform: translateY(110%); }
-  to { transform: translateY(0); }
+  from { transform: translateX(-110%); }
+  to { transform: translateX(0); }
 }
 
 @keyframes letterFadeIn {
