@@ -168,6 +168,11 @@ p {
   position: relative;
 }
 
+.section-divider {
+  padding: 0;
+  background-color: var(--color-bg);
+}
+
 .bg-dark {
   background-color: var(--color-bg);
 }
@@ -1961,7 +1966,7 @@ p {
   display: flex;
   align-items: center;
   overflow: hidden;
-  padding: 5rem 8rem 0; /* Added top padding to prevent overlap with navbar */
+  padding: 0 8rem;
 }
 
 .story-grid {
