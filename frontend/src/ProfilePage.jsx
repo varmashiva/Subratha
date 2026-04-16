@@ -41,6 +41,9 @@ export default function ProfilePage({ user, onBack, onLogout }) {
 
   const totalOrders = orders.length;
   const activeOrders = orders.filter(o => !['completed', 'delivered', 'cancelled'].includes((o.status || '').toLowerCase())).length;
+  const totalPaid = orders
+    .filter(o => ['completed', 'delivered'].includes((o.status || '').toLowerCase()))
+    .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
   return (
     <div style={{
@@ -184,10 +187,19 @@ export default function ProfilePage({ user, onBack, onLogout }) {
         </div>
 
         {/* Orders Section */}
-        <div style={{ marginBottom: '1rem' }}>
+        <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#1a1a2e' }}>
             Order History
           </h2>
+          {totalPaid > 0 && (
+            <div style={{
+              background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.2)',
+              color: '#16a34a', borderRadius: '10px', padding: '0.4rem 1rem',
+              fontSize: '0.85rem', fontWeight: 700,
+            }}>
+              ₹{totalPaid.toLocaleString('en-IN')} paid to delivery
+            </div>
+          )}
         </div>
 
         {loading ? (
