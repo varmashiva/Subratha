@@ -69,6 +69,11 @@ function App() {
           picture: data.user.picture || null,
           role: data.user.role || 'user'
         });
+        const redirect = localStorage.getItem('postAuthRedirect');
+        if (redirect) {
+          navigate(redirect);
+          localStorage.removeItem('postAuthRedirect');
+        }
       }
     } catch (err) {
       setIsAuthenticated(false);
@@ -119,6 +124,7 @@ function App() {
     if (!isAuthenticated) {
       setIsSignup(signupToggle);
       setShowAuthModal(true);
+      localStorage.setItem('postAuthRedirect', '/schedule');
     } else {
       setIsOrdering(true);
       setOrderStep(1);
@@ -130,6 +136,13 @@ function App() {
     e.preventDefault();
     setIsAuthenticated(true);
     setShowAuthModal(false);
+    const redirect = localStorage.getItem('postAuthRedirect');
+    if (redirect) {
+      navigate(redirect);
+      localStorage.removeItem('postAuthRedirect');
+    } else {
+      navigate('/');
+    }
   };
 
   const handleGoogleLogin = () => {
@@ -228,7 +241,7 @@ function App() {
             {!isAuthenticated ? (
               <div
                 className="user-profile user-profile--guest"
-                onClick={() => { setIsSignup(false); setShowAuthModal(true); }}
+                onClick={() => { setIsSignup(false); setShowAuthModal(true); localStorage.setItem('postAuthRedirect', '/'); }}
                 title="Sign In"
               >
                 <div className="user-avatar user-avatar--guest">
@@ -302,7 +315,7 @@ function App() {
                       </button>
                     </>
                   ) : (
-                    <button className="mobile-menu-item" onClick={() => { setIsSignup(false); setShowAuthModal(true); setShowMobileMenu(false); }}>
+                    <button className="mobile-menu-item" onClick={() => { setIsSignup(false); setShowAuthModal(true); setShowMobileMenu(false); localStorage.setItem('postAuthRedirect', '/'); }}>
                       Sign In
                     </button>
                   )}
