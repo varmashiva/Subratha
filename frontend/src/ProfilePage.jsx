@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ArrowLeft, LogOut, Package, Clock, MapPin, CheckCircle, XCircle, Truck, RefreshCw, IndianRupee } from 'lucide-react';
+import { ArrowLeft, LogOut, Package, Clock, MapPin, CheckCircle, XCircle, Truck, RefreshCw } from 'lucide-react';
 
 const API_URL = 'https://subratha.onrender.com/api';
 
@@ -38,9 +38,6 @@ export default function ProfilePage({ user, onBack, onLogout }) {
     fetchOrders();
   }, []);
 
-  const totalPaid = orders
-    .filter(o => ['completed', 'delivered'].includes((o.status || '').toLowerCase()))
-    .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
   const totalOrders = orders.length;
   const activeOrders = orders.filter(o => !['completed', 'delivered', 'cancelled'].includes((o.status || '').toLowerCase())).length;
@@ -132,21 +129,14 @@ export default function ProfilePage({ user, onBack, onLogout }) {
               {user?.name || 'User'}
             </h1>
             <p style={{ margin: '0.3rem 0 0', opacity: 0.75, fontSize: '0.95rem' }}>{user?.email}</p>
-            <span style={{
-              display: 'inline-block', marginTop: '0.75rem',
-              background: 'rgba(255,255,255,0.2)', padding: '0.25rem 0.75rem',
-              borderRadius: '100px', fontSize: '0.75rem', fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: '0.08em',
-            }}>
-              {user?.role || 'Customer'}
-            </span>
+
           </div>
         </div>
 
         {/* Stats Row */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: 'repeat(2, 1fr)',
           gap: '1rem',
           marginBottom: '2.5rem',
         }}>
@@ -164,13 +154,6 @@ export default function ProfilePage({ user, onBack, onLogout }) {
               icon: <RefreshCw size={24} />,
               color: '#d97706',
               bg: 'rgba(243,156,18,0.08)',
-            },
-            {
-              label: 'Total Paid',
-              value: `₹${totalPaid.toLocaleString('en-IN')}`,
-              icon: <IndianRupee size={24} />,
-              color: '#16a34a',
-              bg: 'rgba(39,174,96,0.08)',
             },
           ].map((stat, i) => (
             <div key={i} style={{
@@ -201,19 +184,10 @@ export default function ProfilePage({ user, onBack, onLogout }) {
         </div>
 
         {/* Orders Section */}
-        <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ marginBottom: '1rem' }}>
           <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#1a1a2e' }}>
             Order History
           </h2>
-          {totalPaid > 0 && (
-            <div style={{
-              background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.2)',
-              color: '#16a34a', borderRadius: '10px', padding: '0.4rem 1rem',
-              fontSize: '0.85rem', fontWeight: 700,
-            }}>
-              ₹{totalPaid.toLocaleString('en-IN')} paid to delivery
-            </div>
-          )}
         </div>
 
         {loading ? (
@@ -371,40 +345,7 @@ export default function ProfilePage({ user, onBack, onLogout }) {
           </div>
         )}
 
-        {/* Total Paid Summary Banner */}
-        {totalPaid > 0 && (
-          <div style={{
-            marginTop: '2rem',
-            background: 'linear-gradient(135deg, #16a34a, #15803d)',
-            borderRadius: '16px',
-            padding: '1.5rem 2rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            color: '#fff',
-            boxShadow: '0 10px 40px rgba(22,163,74,0.25)',
-            flexWrap: 'wrap',
-            gap: '1rem',
-          }}>
-            <div>
-              <div style={{ fontSize: '0.8rem', opacity: 0.8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.25rem' }}>
-                Total Amount Paid to Delivery
-              </div>
-              <div style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.03em' }}>
-                ₹{totalPaid.toLocaleString('en-IN')}
-              </div>
-            </div>
-            <div style={{
-              background: 'rgba(255,255,255,0.15)', borderRadius: '12px',
-              padding: '1rem 1.5rem', textAlign: 'center',
-            }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 900 }}>
-                {orders.filter(o => ['completed', 'delivered'].includes((o.status || '').toLowerCase())).length}
-              </div>
-              <div style={{ fontSize: '0.75rem', opacity: 0.8, fontWeight: 600 }}>Completed Orders</div>
-            </div>
-          </div>
-        )}
+
       </div>
 
       <style>{`
