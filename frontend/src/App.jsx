@@ -27,6 +27,7 @@ function App() {
   const [isAdminPortal, setIsAdminPortal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [globalScrollProgress, setGlobalScrollProgress] = useState(0);
+  const [activeSub, setActiveSub] = useState(null);
 
   // Order Flow State
   const navigate = useNavigate();
@@ -59,6 +60,15 @@ function App() {
     }
   };
 
+  const fetchActiveSubscription = async () => {
+    try {
+      const { data } = await axios.get('https://subratha.onrender.com/api/subscriptions/my', { withCredentials: true });
+      setActiveSub(data.subscription);
+    } catch (err) {
+      console.error('Error fetching active subscription:', err);
+    }
+  };
+
   // Persistent Auth Check
   const checkAuthStatus = async () => {
     try {
@@ -71,6 +81,7 @@ function App() {
           picture: data.user.picture || null,
           role: data.user.role || 'user'
         });
+        fetchActiveSubscription();
         const redirect = localStorage.getItem('postAuthRedirect');
         if (redirect) {
           navigate(redirect);
@@ -104,11 +115,16 @@ function App() {
   const handleOrderSubmit = async () => {
     try {
       const totalAmount = calculateTotal();
+      const subItems = cart.filter(item => item.subscriptionApplied);
+      const subKgDeducted = subItems.reduce((sum, item) => sum + (item.unit === 'kg' ? item.quantity : 0), 0);
+      
       const payload = {
         items: cart,
         address: orderDetails.address,
         time: orderDetails.time,
-        totalAmount
+        totalAmount,
+        subscriptionApplied: subItems.length > 0,
+        subscriptionKgDeducted: subKgDeducted
       };
       const response = await axios.post('https://subratha.onrender.com/api/orders', payload, { withCredentials: true });
       if (response.data.success) {
@@ -116,6 +132,7 @@ function App() {
         setIsOrdering(false);
         setCart([]);
         setOrderDetails({ address: '', time: '' });
+        fetchActiveSubscription(); // Refresh usage
       }
     } catch (err) {
       alert('Error placing order. Please try again.');
@@ -553,6 +570,80 @@ function App() {
             </div>
           </section>
 
+          <section className="section" style={{ background: 'var(--color-bg)', padding: 'var(--space-2xl) 0' }}>
+            <div className="container">
+              <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+                <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, marginBottom: '1rem' }}>Subscription Plans</h2>
+                <p style={{ color: 'var(--color-text-dim)', fontSize: '1.2rem' }}>Premium care for your regular laundry needs</p>
+              </div>
+
+              <div className="services-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+                {[
+                  {
+                    name: "Wash & Fold",
+                    price: "1999",
+                    weight: "25kg",
+                    service: "Wash and dry",
+                    features: ["Eco-friendly Wash", "Careful Folding", "Free Pickup & Delivery"]
+                  },
+                  {
+                    name: "Wash & Iron",
+                    price: "2499",
+                    weight: "25kg",
+                    service: "Wash and iron",
+                    features: ["Eco-friendly Wash", "Steam Ironing", "Free Pickup & Delivery"]
+                  }
+                ].map((plan, i) => (
+                  <div key={i} className="service-card" style={{
+                    padding: '2.5rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '1.5rem',
+                    textAlign: 'center',
+                    background: i === 1 ? 'linear-gradient(135deg, rgba(91,62,132,0.1) 0%, rgba(91,62,132,0.05) 100%)' : 'rgba(255,255,255,0.03)',
+                    border: i === 1 ? '1px solid var(--color-primary)' : '1px solid rgba(255,255,255,0.05)',
+                  }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>{plan.name}</div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.2rem' }}>
+                      <span style={{ fontSize: '2.5rem', fontWeight: 900 }}>₹{plan.price}</span>
+                      <span style={{ color: 'var(--color-text-dim)' }}>/month</span>
+                    </div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>Up to {plan.weight} included</div>
+                    <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.8rem', textAlign: 'left', width: '100%' }}>
+                      {plan.features.map((f, fi) => (
+                        <li key={fi} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.95rem' }}>
+                          <CheckCircle size={18} color="var(--color-primary)" /> {f}
+                        </li>
+                      ))}
+                      <li style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.95rem' }}>
+                        <CheckCircle size={18} color="var(--color-primary)" /> Applies to: {plan.service}
+                      </li>
+                    </ul>
+                    <button
+                      className="btn btn-primary"
+                      style={{ width: '100%', marginTop: 'auto', padding: '1rem' }}
+                      onClick={() => {
+                        const s = globalServices.find(gs => gs.name === plan.service);
+                        if (s) {
+                          setSelectedService(s);
+                          setIsKgBased(true);
+                          handleAction();
+                          setOrderStep(1);
+                        } else {
+                          handleAction();
+                        }
+                      }}
+                    >
+                      Choose Plan
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
 
         </>
       ) : (
@@ -691,8 +782,33 @@ function App() {
 
                   {selectedService && (
                     <div style={{ textAlign: 'right', marginBottom: '1rem', color: '#f5f2f8' }}>
+                      {activeSub && activeSub.serviceType === selectedService.name && isKgBased ? (
+                        <div style={{ textAlign: 'left', background: 'rgba(22,163,74,0.1)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', border: '1px solid rgba(22,163,74,0.3)' }}>
+                          <div style={{ color: '#16a34a', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Zap size={16} fill="#16a34a" /> Subscription Active: {activeSub.plan}
+                          </div>
+                          <div style={{ fontSize: '0.85rem', color: '#b6a3ce', marginTop: '0.2rem' }}>
+                            Used: {activeSub.usedKg}kg / {activeSub.limitKg}kg
+                          </div>
+                          {activeSub.usedKg + weight > activeSub.limitKg && (
+                            <div style={{ color: '#d97706', fontSize: '0.8rem', marginTop: '0.4rem', fontWeight: 700 }}>
+                              ⚠️ You have exceeded your monthly limit. Normal pricing applies to extra weight.
+                            </div>
+                          )}
+                        </div>
+                      ) : activeSub && activeSub.serviceType === selectedService.name && !isKgBased ? (
+                        <div style={{ textAlign: 'left', background: 'rgba(91,62,132,0.1)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', border: '1px solid rgba(91,62,132,0.3)' }}>
+                           <div style={{ color: '#5b3e84', fontWeight: 800 }}>Note: Your subscription applies only to per-kg weights.</div>
+                        </div>
+                      ) : null}
+                      
                       <p style={{ display: 'inline', fontSize: '1.1rem', marginRight: '2rem' }}>Price: <strong>₹{isKgBased ? selectedService.basePrice : selectedService.price} / {isKgBased ? 'kg' : 'pc'}</strong></p>
-                      <p style={{ display: 'inline', fontSize: '1.25rem' }}>Total: <strong style={{ color: 'var(--color-primary)', background: '#f5f2f8', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>₹{isKgBased ? (selectedService.basePrice * weight) : (selectedService.price * quantity)}</strong></p>
+                      <p style={{ display: 'inline', fontSize: '1.25rem' }}>Total: <strong style={{ color: 'var(--color-primary)', background: '#f5f2f8', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                        ₹{activeSub && activeSub.serviceType === selectedService.name && isKgBased ? 0 : (isKgBased ? (selectedService.basePrice * weight) : (selectedService.price * quantity))}
+                      </strong></p>
+                      {activeSub && activeSub.serviceType === selectedService.name && isKgBased && (
+                        <div style={{ color: '#16a34a', fontWeight: 800, fontSize: '0.8rem', marginTop: '0.25rem' }}>SUBSCRIPTION APPLIED</div>
+                      )}
                     </div>
                   )}
 
@@ -701,14 +817,16 @@ function App() {
                     style={{ width: '100%', borderRadius: 'var(--radius-md)' }}
                     disabled={(!selectedProduct && !isKgBased) || !selectedService}
                     onClick={() => {
+                      const isSubApplied = activeSub && activeSub.serviceType === selectedService.name && isKgBased;
                       const newItem = {
                         id: Date.now(),
                         product: isKgBased ? 'Bulk/KG' : selectedProduct.name,
                         service: selectedService.name,
                         quantity: isKgBased ? weight : quantity,
                         unit: isKgBased ? 'kg' : 'pcs',
-                        price: isKgBased ? selectedService.basePrice : selectedService.price,
-                        total: isKgBased ? (selectedService.basePrice * weight) : (selectedService.price * quantity)
+                        price: isSubApplied ? 0 : (isKgBased ? selectedService.basePrice : selectedService.price),
+                        total: isSubApplied ? 0 : (isKgBased ? (selectedService.basePrice * weight) : (selectedService.price * quantity)),
+                        subscriptionApplied: isSubApplied
                       };
                       setCart([...cart, newItem]);
                       setSelectedProduct(null);
@@ -740,7 +858,12 @@ function App() {
                           {cart.map(item => (
                             <tr key={item.id} style={{ borderBottom: '1px solid rgba(91, 62, 132, 0.1)' }}>
                               <td style={{ padding: '1rem' }}>{item.product}</td>
-                              <td style={{ padding: '1rem' }}>{item.service}</td>
+                              <td style={{ padding: '1rem' }}>
+                                {item.service}
+                                {item.subscriptionApplied && (
+                                  <div style={{ fontSize: '0.65rem', color: '#16a34a', fontWeight: 800, marginTop: '0.2rem' }}>SUBSCRIPTION APPLIED</div>
+                                )}
+                              </td>
                               <td style={{ padding: '1rem', textAlign: 'center' }}>{item.quantity} {item.unit || 'pcs'}</td>
                               <td style={{ padding: '1rem', textAlign: 'right' }}>₹{item.price}/{item.unit === 'kg' ? 'kg' : 'pc'}</td>
                               <td style={{ padding: '1rem', textAlign: 'right' }}>₹{item.total}</td>

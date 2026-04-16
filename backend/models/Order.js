@@ -47,6 +47,14 @@ const orderSchema = new mongoose.Schema({
     enum: ['Pending', 'Confirmed', 'Processing', 'Out for Delivery', 'Completed', 'Cancelled'],
     default: 'Pending'
   },
+  subscriptionApplied: {
+    type: Boolean,
+    default: false
+  },
+  subscriptionKgDeducted: {
+    type: Number,
+    default: 0
+  },
   createdAt: {
     type: Date,
     default: Date.now

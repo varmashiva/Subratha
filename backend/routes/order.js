@@ -2,6 +2,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import Order from '../models/Order.js';
 import User from '../models/User.js';
+import Subscription from '../models/Subscription.js';
 
 const router = express.Router();
 
@@ -23,10 +24,18 @@ const protect = async (req, res, next) => {
 // Create a new order
 router.post('/', protect, async (req, res) => {
   try {
-    const { items, address, time, totalAmount } = req.body;
-    
+    const { items, address, time, totalAmount, subscriptionApplied, subscriptionKgDeducted } = req.body;
+
     if (!items || !items.length || !address || !time) {
       return res.status(400).json({ message: 'Required fields missing' });
+    }
+
+    // If subscription was applied on the frontend, deduct kg from subscription
+    if (subscriptionApplied && subscriptionKgDeducted > 0) {
+      await Subscription.findOneAndUpdate(
+        { userId: req.user.id, status: 'Active' },
+        { $inc: { usedKg: subscriptionKgDeducted } }
+      );
     }
 
     const order = await Order.create({
@@ -34,13 +43,15 @@ router.post('/', protect, async (req, res) => {
       items,
       address,
       pickupTime: time,
-      totalAmount
+      totalAmount,
+      subscriptionApplied: subscriptionApplied || false,
+      subscriptionKgDeducted: subscriptionKgDeducted || 0
     });
 
-    res.status(201).json({ 
-      success: true, 
+    res.status(201).json({
+      success: true,
       message: 'Order placed successfully!',
-      order 
+      order
     });
   } catch (error) {
     console.error('Order creation error:', error);

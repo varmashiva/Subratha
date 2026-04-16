@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
-  Package, DollarSign, Hotel, LogOut, ChevronDown, ChevronUp,
-  Plus, Save, Trash2, Edit2, Check, X, Search, Settings, Shirt
+  Plus, Save, Trash2, Edit2, Check, X, Search, Settings, Shirt, Zap, Calendar, BarChart, User
 } from 'lucide-react';
 
 // API Config
@@ -380,6 +379,149 @@ function PricingTab() {
   );
 }
 
+function SubscriptionsTab() {
+  const [subs, setSubs] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({ userId: '', plan: 'Wash & Fold', startDate: '', endDate: '', limitKg: 25, usedKg: 0 });
+
+  const fetchData = async () => {
+    try {
+      const [sRes, uRes] = await Promise.all([
+        axios.get(`${API_URL}/subscriptions`, { withCredentials: true }),
+        axios.get(`${API_URL}/subscriptions/users`, { withCredentials: true })
+      ]);
+      setSubs(sRes.data);
+      setUsers(uRes.data);
+    } catch (err) { console.error(err); } finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  const saveSub = async () => {
+    if (!form.userId || !form.startDate || !form.endDate) return alert('Fill all fields');
+    try {
+      await axios.post(`${API_URL}/subscriptions`, form, { withCredentials: true });
+      setShowModal(false);
+      fetchData();
+    } catch (err) { alert('Error assigning subscription'); }
+  };
+
+  const deleteSub = async (id) => {
+    if (!window.confirm('Delete this subscription?')) return;
+    try {
+      await axios.delete(`${API_URL}/subscriptions/${id}`, { withCredentials: true });
+      fetchData();
+    } catch (err) { alert('Error deleting'); }
+  };
+
+  const resetUsage = async (id) => {
+    try {
+      await axios.patch(`${API_URL}/subscriptions/${id}/reset`, {}, { withCredentials: true });
+      fetchData();
+    } catch (err) { alert('Error resetting'); }
+  };
+
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', opacity: 0.5 }}>Loading...</div>;
+
+  return (
+    <div>
+      <div className="adm-toolbar">
+         <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => {
+           setForm({ userId: '', plan: 'Wash & Fold', startDate: '', endDate: '', limitKg: 25, usedKg: 0 });
+           setShowModal(true);
+         }}>
+           <Plus size={16} /> Assign Subscription
+         </button>
+         <div style={{ flex: 1 }}></div>
+         <button className="adm-icon-btn" onClick={fetchData}><RefreshCw size={16} /></button>
+      </div>
+
+      <div className="b2b-table-container">
+        <table className="b2b-table">
+          <thead>
+            <tr>
+              <th>User</th><th>Plan</th><th>Usage (Kg)</th><th>Progress</th><th>Expiry</th><th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(subs || []).map(s => {
+              const progress = Math.min(100, (s.usedKg / s.limitKg) * 100);
+              return (
+                <tr key={s._id}>
+                  <td style={{ fontWeight: 600 }}>
+                    {s.userId?.name || 'Unknown'} <br/>
+                    <small style={{ opacity: 0.5, fontWeight: 400 }}>{s.userId?.email}</small>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 700, color: '#5b3e84' }}>{s.plan}</div>
+                    <small style={{ opacity: 0.5 }}>{s.serviceType}</small>
+                  </td>
+                  <td style={{ fontWeight: 700 }}>{s.usedKg} / {s.limitKg}</td>
+                  <td style={{ width: '150px' }}>
+                    <div style={{ width: '100%', background: 'rgba(0,0,0,0.05)', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: `${progress}%`, height: '100%', background: progress > 100 ? '#f39c12' : '#5b3e84', transition: 'width 0.3s' }}></div>
+                    </div>
+                  </td>
+                  <td>{new Date(s.endDate).toLocaleDateString()}</td>
+                  <td>
+                    <span style={{
+                      padding: '0.2rem 0.6rem', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 800,
+                      background: s.status === 'Active' ? 'rgba(39,174,96,0.1)' : 'rgba(231,76,60,0.1)',
+                      color: s.status === 'Active' ? '#27ae60' : '#e74c3c'
+                    }}>{s.status.toUpperCase()}</span>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button className="adm-icon-btn" title="Reset Usage" onClick={() => resetUsage(s._id)}><RefreshCw size={14} /></button>
+                      <button className="adm-icon-btn text-danger" onClick={() => deleteSub(s._id)}><Trash2 size={14} /></button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Assign New Subscription">
+        <div className="auth-form" style={{ gap: '1rem' }}>
+          <div className="input-group">
+            <label className="form-label">Select User</label>
+            <select className="input-field" value={form.userId} onChange={e => setForm({ ...form, userId: e.target.value })}>
+              <option value="">-- Select User --</option>
+              {users.map(u => <option key={u._id} value={u._id}>{u.name} ({u.email})</option>)}
+            </select>
+          </div>
+          <div className="input-group">
+            <label className="form-label">Plan Type</label>
+            <select className="input-field" value={form.plan} onChange={e => setForm({ ...form, plan: e.target.value })}>
+              <option value="Wash & Fold">Wash & Fold (₹1999)</option>
+              <option value="Wash & Iron">Wash & Iron (₹2499)</option>
+            </select>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="input-group">
+              <label className="form-label">Start Date</label>
+              <input type="date" className="input-field" value={form.startDate} onChange={e => setForm({ ...form, startDate: e.target.value })} />
+            </div>
+            <div className="input-group">
+              <label className="form-label">End Date</label>
+              <input type="date" className="input-field" value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} />
+            </div>
+          </div>
+          <div className="input-group">
+            <label className="form-label">Monthly Limit (KG)</label>
+            <input type="number" className="input-field" value={form.limitKg} onChange={e => setForm({ ...form, limitKg: e.target.value })} />
+          </div>
+          <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} onClick={saveSub}>Create Subscription</button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
 function HotelsTab() {
   return (
     <div className="b2b-card" style={{ textAlign: 'center', padding: '5rem', background: '#fff' }}>
@@ -395,6 +537,7 @@ function HotelsTab() {
 const TABS = [
   { id: 'orders', label: 'Orders Desk', Icon: Package },
   { id: 'pricing', label: 'Pricing Engine', Icon: Settings },
+  { id: 'subscriptions', label: 'Subscriptions', Icon: Zap },
   { id: 'hotels', label: 'B2B Hub', Icon: Hotel },
 ];
 
@@ -428,6 +571,7 @@ export default function AdminDashboard({ onLogout }) {
         <div className="b2b-content fade-in" key={activeTab} style={{ padding: '0 3rem 3rem' }}>
           {activeTab === 'orders' && <OrdersTab />}
           {activeTab === 'pricing' && <PricingTab />}
+          {activeTab === 'subscriptions' && <SubscriptionsTab />}
           {activeTab === 'hotels' && <HotelsTab />}
         </div>
       </main>

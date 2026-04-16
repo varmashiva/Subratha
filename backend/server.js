@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.js';
 import orderRoutes from './routes/order.js';
 import productRoutes from './routes/products.js';
 import serviceRoutes from './routes/services.js';
+import subscriptionRoutes from './routes/subscription.js';
 import Product from './models/Product.js';
 import Service from './models/Service.js';
 
@@ -51,6 +52,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/services', serviceRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
 
 // Basic sanity check route
 app.get('/api/health', (req, res) => {
