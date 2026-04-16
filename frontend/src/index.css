@@ -626,9 +626,9 @@ p {
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  width: 100%;
-  max-width: 450px;
+  padding: clamp(1.5rem, 5vw, var(--space-lg));
+  width: 90%;
+  max-width: 420px;
   position: relative;
   box-shadow: 0 40px 100px rgba(0,0,0,0.5);
 }
