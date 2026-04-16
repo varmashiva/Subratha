@@ -9,17 +9,19 @@ axios.interceptors.request.use((config) => {
   }
   return config;
 });
-import { X, LogIn, Mail, Waves, Shirt, Wind, Sparkles, Hotel, Zap, Tag, ShieldCheck, Award, Phone, MapPin, CheckCircle, Clock, User, Menu } from 'lucide-react';
+import { X, LogIn, Waves, Shirt, Zap, Tag, ShieldCheck, Award, MapPin, CheckCircle, Clock, User, Menu } from 'lucide-react';
 import './index.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import HotelDashboard from './HotelDashboard';
 import AdminDashboard from './AdminDashboard';
+import ProfilePage from './ProfilePage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showProfilePage, setShowProfilePage] = useState(false);
   const [isSignup, setIsSignup] = useState(false);
   const [isHotelPortal, setIsHotelPortal] = useState(false);
   const [isAdminPortal, setIsAdminPortal] = useState(false);
@@ -232,6 +234,11 @@ function App() {
     return <HotelDashboard onLogout={() => setIsHotelPortal(false)} />;
   }
 
+  // ─── Profile Page ──────────────────────────────────────────────────────────
+  if (showProfilePage) {
+    return <ProfilePage user={user} onBack={() => setShowProfilePage(false)} onLogout={() => { handleLogout(); setShowProfilePage(false); }} />;
+  }
+
   return (
     <>
       <header>
@@ -249,7 +256,16 @@ function App() {
                 </div>
               </div>
             ) : (
-              <div className={`user-profile ${showProfileDropdown ? 'active' : ''}`} onClick={() => setShowProfileDropdown(!showProfileDropdown)}>
+              <div
+                className="user-profile"
+                onClick={() => {
+                  if (user?.role === 'admin') {
+                    setShowProfileDropdown(!showProfileDropdown);
+                  } else {
+                    setShowProfilePage(true);
+                  }
+                }}
+              >
                 <div className="user-avatar">
                   {user?.picture ? (
                     <img src={user.picture} alt={user.name} />
@@ -258,22 +274,17 @@ function App() {
                   )}
                 </div>
 
-                {showProfileDropdown && (
+                {showProfileDropdown && user?.role === 'admin' && (
                   <div className="dropdown-menu">
-                    {user?.role === 'admin' && (
-                      <button
-                        className="dropdown-item"
-                        style={{ color: 'var(--color-primary)', fontWeight: '600' }}
-                        onClick={() => { setIsAdminPortal(true); setShowProfileDropdown(false); }}
-                      >
-                        ⚙ Admin Dashboard
-                      </button>
-                    )}
-                    <button className="dropdown-item">
-                      <Phone size={16} /> My Orders
+                    <button
+                      className="dropdown-item"
+                      style={{ color: 'var(--color-primary)', fontWeight: '600' }}
+                      onClick={() => { setIsAdminPortal(true); setShowProfileDropdown(false); }}
+                    >
+                      ⚙ Admin Dashboard
                     </button>
-                    <button className="dropdown-item">
-                      <ShieldCheck size={16} /> Profile Settings
+                    <button className="dropdown-item" onClick={() => { setShowProfilePage(true); setShowProfileDropdown(false); }}>
+                      <User size={16} /> My Profile
                     </button>
                     <div className="dropdown-divider"></div>
                     <button className="dropdown-item text-danger" onClick={handleLogout}>
@@ -309,7 +320,7 @@ function App() {
                           ⚙ Admin Dashboard
                         </button>
                       )}
-                      <button className="mobile-menu-item" onClick={() => setShowMobileMenu(false)}>My Orders</button>
+                      <button className="mobile-menu-item" onClick={() => { setShowProfilePage(true); setShowMobileMenu(false); }}>My Profile</button>
                       <button className="mobile-menu-item text-danger" onClick={() => { handleLogout(); setShowMobileMenu(false); }}>
                         Logout
                       </button>
