@@ -202,8 +202,10 @@ function PricingTab() {
 
   const saveProduct = async () => {
     try {
-      const existing = products.find(p => p.name.toLowerCase() === prodForm.name.toLowerCase());
-      const serviceObj = { name: prodForm.serviceName, price: parseFloat(prodForm.price) };
+      const existing = products.find(p => p.name.trim().toLowerCase() === prodForm.name.trim().toLowerCase());
+      const isGlobal = services.find(s => s.name === prodForm.serviceName)?.type === 'Global';
+      const parsedPrice = parseFloat(prodForm.price);
+      const serviceObj = { name: prodForm.serviceName, price: isGlobal ? 0 : (isNaN(parsedPrice) ? 0 : parsedPrice) };
 
       if (existing) {
         const updatedServices = [...existing.services.filter(s => s.name !== prodForm.serviceName), serviceObj];
@@ -218,7 +220,10 @@ function PricingTab() {
       setShowProductModal(false);
       setProdForm({ name: '', price: '', serviceName: '' });
       fetchData();
-    } catch (err) { alert('Error saving product'); }
+    } catch (err) {
+      alert('Error saving product: ' + (err.response?.data?.message || err.message));
+      console.error(err);
+    }
   };
 
   const deleteProductPrice = async (pId, sName) => {
@@ -269,9 +274,9 @@ function PricingTab() {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              cursor: svc.type === 'Product-based' ? 'pointer' : 'default',
+              cursor: 'pointer',
               background: isExp ? 'rgba(91, 62, 132, 0.02)' : 'transparent'
-            }} onClick={() => svc.type === 'Product-based' && setExpandedSvc(isExp ? null : svc._id)}>
+            }} onClick={() => setExpandedSvc(isExp ? null : svc._id)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <div style={{
                   width: '40px', height: '40px', borderRadius: '10px',
@@ -302,11 +307,9 @@ function PricingTab() {
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button className="adm-icon-btn" onClick={(e) => { e.stopPropagation(); setEditingSvcId(svc._id); setSvcForm(svc); setShowServiceModal(true); }}><Edit2 size={16} /></button>
                   <button className="adm-icon-btn danger" onClick={(e) => { e.stopPropagation(); deleteService(svc._id); }}><Trash2 size={16} /></button>
-                  {svc.type === 'Product-based' && (
-                    <div style={{ marginLeft: '1rem', color: '#b6a3ce' }}>
-                      {isExp ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-                    </div>
-                  )}
+                  <div style={{ marginLeft: '1rem', color: '#b6a3ce' }}>
+                    {isExp ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                  </div>
                 </div>
               </div>
             </div>
@@ -333,13 +336,15 @@ function PricingTab() {
                 ) : (
                   <table className="b2b-table" style={{ background: '#fff', borderRadius: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
                     <thead>
-                      <tr><th>Product Name</th><th>Price (per pc)</th><th style={{ textAlign: 'right' }}>Action</th></tr>
+                      <tr><th>Product Name</th><th>{svc.type === 'Global' ? 'Price' : 'Price (per pc)'}</th><th style={{ textAlign: 'right' }}>Action</th></tr>
                     </thead>
                     <tbody>
                       {svcProducts.map(p => (
                         <tr key={p._id}>
                           <td><strong>{p.name}</strong></td>
-                          <td style={{ fontWeight: 700, color: '#5b3e84' }}>₹{p.price}</td>
+                          <td style={{ fontWeight: 700, color: '#5b3e84' }}>
+                            {svc.type === 'Global' ? <span style={{opacity: 0.5}}>- (Included in Global Weight)</span> : `₹${p.price}`}
+                          </td>
                           <td style={{ textAlign: 'right' }}>
                             <button className="adm-icon-btn" onClick={() => { setProdForm({ name: p.name, price: p.price, serviceName: svc.name }); setShowProductModal(true); }}><Edit2 size={14} /></button>
                             <button className="adm-icon-btn danger" onClick={() => deleteProductPrice(p._id, svc.name)} style={{ marginLeft: '8px' }}><Trash2 size={14} /></button>
@@ -406,10 +411,12 @@ function PricingTab() {
             <label className="form-label">Product Name</label>
             <input className="input-field" value={prodForm.name} onChange={e => setProdForm({ ...prodForm, name: e.target.value })} placeholder="e.g. Silk Saree" />
           </div>
-          <div className="input-group">
-            <label className="form-label">Price per Piece (₹)</label>
-            <input type="number" className="input-field" value={prodForm.price} onChange={e => setProdForm({ ...prodForm, price: e.target.value })} placeholder="0.00" />
-          </div>
+          {services.find(s => s.name === prodForm.serviceName)?.type !== 'Global' && (
+            <div className="input-group">
+              <label className="form-label">Price per Piece (₹)</label>
+              <input type="number" className="input-field" value={prodForm.price} onChange={e => setProdForm({ ...prodForm, price: e.target.value })} placeholder="0.00" />
+            </div>
+          )}
           <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} onClick={saveProduct}>Save Mapping</button>
         </div>
       </Modal>

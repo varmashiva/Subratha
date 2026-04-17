@@ -11,7 +11,7 @@ axios.interceptors.request.use((config) => {
 });
 import { X, LogIn, Waves, Shirt, Zap, Tag, ShieldCheck, Award, MapPin, CheckCircle, Clock, User, Menu } from 'lucide-react';
 import './index.css';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import HotelDashboard from './HotelDashboard';
 import AdminDashboard from './AdminDashboard';
 import ProfilePage from './ProfilePage';
@@ -21,10 +21,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-  const [showProfilePage, setShowProfilePage] = useState(false);
   const [isSignup, setIsSignup] = useState(false);
-  const [isHotelPortal, setIsHotelPortal] = useState(false);
-  const [isAdminPortal, setIsAdminPortal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [globalScrollProgress, setGlobalScrollProgress] = useState(0);
   const [activeSub, setActiveSub] = useState(null);
@@ -32,10 +29,17 @@ function App() {
   // Order Flow State
   const navigate = useNavigate();
   const location = useLocation();
-  const isOrdering = location.pathname === '/schedule';
-  const setIsOrdering = (value) => {
-    if (value) navigate('/schedule');
-    else navigate('/');
+
+  const handleAction = (signupToggle = false) => {
+    if (!isAuthenticated) {
+      setIsSignup(signupToggle);
+      setShowAuthModal(true);
+      localStorage.setItem('postAuthRedirect', '/schedule');
+    } else {
+      navigate('/schedule');
+      setOrderStep(1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
   const [orderStep, setOrderStep] = useState(1);
   const [products, setProducts] = useState([]);
@@ -103,7 +107,7 @@ function App() {
     setIsAuthenticated(false);
     setUser(null);
     setShowProfileDropdown(false);
-    setIsOrdering(false);
+    navigate('/');
     setCart([]);
   };
 
@@ -128,8 +132,8 @@ function App() {
       const response = await axios.post('https://subratha.onrender.com/api/orders', payload, { withCredentials: true });
       if (response.data.success) {
         alert(`Success! Our concierge will arrive for your pickup during ${orderDetails.time}. Total Amount: ₹${totalAmount}`);
-        setIsOrdering(false);
-        setCart([]);
+        navigate('/');
+        setOrderStep(1);
         setOrderDetails({ address: '', time: '' });
         fetchActiveSubscription(); // Refresh usage
       }
@@ -138,17 +142,7 @@ function App() {
     }
   };
 
-  const handleAction = (signupToggle = false) => {
-    if (!isAuthenticated) {
-      setIsSignup(signupToggle);
-      setShowAuthModal(true);
-      localStorage.setItem('postAuthRedirect', '/schedule');
-    } else {
-      setIsOrdering(true);
-      setOrderStep(1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
+
 
   const handleAuth = (e) => {
     e.preventDefault();
@@ -202,7 +196,7 @@ function App() {
     }, 100);
 
     return () => observer.disconnect();
-  }, [isOrdering]);
+  }, [location.pathname === '/schedule']);
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -242,22 +236,20 @@ function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  if (isAdminPortal) {
-    return <AdminDashboard onLogout={() => setIsAdminPortal(false)} />;
-  }
-
-  if (isHotelPortal) {
-    return <HotelDashboard onLogout={() => setIsHotelPortal(false)} />;
-  }
-
-  // ─── Profile Page ──────────────────────────────────────────────────────────
-  if (showProfilePage) {
-    return <ProfilePage user={user} onBack={() => setShowProfilePage(false)} onLogout={() => { handleLogout(); setShowProfilePage(false); }} />;
-  }
+  const isCustomerPage = !['/admin', '/hotel', '/profile'].includes(location.pathname);
+  const isHome = location.pathname === '/';
 
   return (
     <>
-      <header>
+      <Routes>
+        <Route path="/admin" element={<AdminDashboard onLogout={() => navigate('/')} />} />
+        <Route path="/hotel" element={<HotelDashboard onLogout={() => navigate('/')} />} />
+        <Route path="/profile" element={<ProfilePage user={user} onBack={() => navigate('/')} onLogout={() => { handleLogout(); navigate('/'); }} />} />
+
+        {/* Customer Facing Layout Wrapper */}
+        <Route path="/*" element={
+          <>
+            <header>
         <nav className="navbar fade-in">
           <a href="/" className="navbar-brand">Subratha</a>
           <div className="flex-row">
@@ -278,7 +270,7 @@ function App() {
                   if (user?.role === 'admin') {
                     setShowProfileDropdown(!showProfileDropdown);
                   } else {
-                    setShowProfilePage(true);
+                    navigate('/profile');
                   }
                 }}
               >
@@ -295,11 +287,11 @@ function App() {
                     <button
                       className="dropdown-item"
                       style={{ color: 'var(--color-primary)', fontWeight: '600' }}
-                      onClick={() => { setIsAdminPortal(true); setShowProfileDropdown(false); }}
+                      onClick={() => { navigate('/admin'); setShowProfileDropdown(false); }}
                     >
                       ⚙ Admin Dashboard
                     </button>
-                    <button className="dropdown-item" onClick={() => { setShowProfilePage(true); setShowProfileDropdown(false); }}>
+                    <button className="dropdown-item" onClick={() => { navigate('/profile'); setShowProfileDropdown(false); }}>
                       <User size={16} /> My Profile
                     </button>
                     <div className="dropdown-divider"></div>
@@ -353,7 +345,8 @@ function App() {
         </nav>
       </header>
 
-      {!isOrdering ? (
+      <Routes>
+        <Route path="/" element={
         <>
           <main className="hero-wrapper fade-in" style={{ animationDelay: '0.2s' }}>
             <video
@@ -662,7 +655,9 @@ function App() {
           </div>
 
         </>
-      ) : (
+        } />
+
+        <Route path="/schedule" element={
         <main className="container order-container fade-in">
           <div className="mobile-only-brand" style={{ textAlign: 'center', marginBottom: '2rem', display: 'none' }}>
             <span className="navbar-brand">Subratha</span>
@@ -970,9 +965,10 @@ function App() {
             </div>
           </div>
         </main>
-      )}
+        } />
+      </Routes>
 
-      {!isOrdering && (
+      {isCustomerPage && isHome && (
         <footer className="site-footer fade-in" style={{ animationDelay: '1s' }}>
           {/* Section Divider */}
           <div className="section-divider" style={{ padding: 'var(--space-lg) 0' }}>
@@ -1107,6 +1103,9 @@ function App() {
           </svg>
         </div>
       </button>
+      </>
+        } />
+      </Routes>
     </>
   );
 }
