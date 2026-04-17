@@ -863,40 +863,51 @@ function App() {
                         )}
 
                         {selectedService && (
-                          <div style={{ background: 'rgba(91,62,132,0.06)', borderRadius: '12px', padding: '1rem', display: 'flex', alignItems: 'flex-end', gap: '1rem', flexWrap: 'wrap' }}>
-                            <div style={{ flex: 1, minWidth: '140px' }}>
-                              <label style={{ fontSize: '0.8rem', color: '#b6a3ce', fontWeight: 600, display: 'block', marginBottom: '0.4rem' }}>Weight (kg)</label>
-                              <input
-                                type="number" min="0.5" step="0.5" value={weight}
-                                onChange={e => setWeight(parseFloat(e.target.value) || 0.5)}
-                                style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1.5px solid rgba(91,62,132,0.2)', background: '#fff', color: 'var(--color-primary)', fontWeight: 700, fontSize: '1rem', outline: 'none' }}
-                              />
-                            </div>
-                            <div>
-                              <div style={{ fontSize: '0.75rem', color: '#b6a3ce', marginBottom: '0.2rem' }}>Total</div>
-                              <div style={{ fontWeight: 800, fontSize: '1.2rem', color: 'var(--color-primary)' }}>
-                                {activeSub && activeSub.serviceType === selectedService.name ? '₹0 (Subscription)' : `₹${(selectedService.basePrice * weight).toFixed(0)}`}
+                          <div style={{ background: 'rgba(91,62,132,0.06)', borderRadius: '12px', padding: '1.25rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+                              <div>
+                                <div style={{ fontSize: '0.75rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, marginBottom: '0.25rem' }}>Service</div>
+                                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--color-primary)' }}>{selectedService.name}</div>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: '0.75rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, marginBottom: '0.25rem' }}>Rate</div>
+                                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--color-primary)' }}>₹{selectedService.basePrice}/kg</div>
                               </div>
                             </div>
+
+                            <div style={{ background: 'rgba(91,62,132,0.04)', borderRadius: '10px', padding: '1rem', marginBottom: '1.25rem', border: '1px dashed rgba(91,62,132,0.2)' }}>
+                              <p style={{ margin: '0 0 0.4rem', fontSize: '0.85rem', color: '#5b3e84', fontWeight: 600 }}>ℹ️ Measurement Info</p>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                <div style={{ fontSize: '0.82rem', color: '#b6a3ce', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--color-primary)' }}></div>
+                                  Final weight will be measured at pickup
+                                </div>
+                                <div style={{ fontSize: '0.82rem', color: '#b6a3ce', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--color-primary)' }}></div>
+                                  Exact price will be updated after inspection
+                                </div>
+                              </div>
+                            </div>
+
                             <button
                               className="btn btn-primary"
-                              style={{ padding: '0.6rem 1.5rem', borderRadius: '8px' }}
-                              onClick={() => {
-                                const isSubApplied = activeSub && activeSub.serviceType === selectedService.name;
-                                setCart([...cart, {
-                                  id: Date.now(),
-                                  product: 'Bulk/KG',
-                                  service: selectedService.name,
-                                  quantity: weight,
-                                  unit: 'kg',
-                                  price: isSubApplied ? 0 : selectedService.basePrice,
-                                  total: isSubApplied ? 0 : selectedService.basePrice * weight,
-                                  subscriptionApplied: isSubApplied
-                                }]);
-                                setSelectedService(null);
-                                setWeight(1);
-                              }}
-                            >+ Add to Cart</button>
+                              style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', fontSize: '0.95rem' }}
+                               onClick={() => {
+                                 const isSubApplied = activeSub && activeSub.serviceType === selectedService.name;
+                                 setCart([...cart, {
+                                   id: Date.now(),
+                                   product: 'Bulk/Weight',
+                                   service: selectedService.name,
+                                   quantity: 0, // Using 0 for pending weight
+                                   unit: 'kg',
+                                   price: isSubApplied ? 0 : selectedService.basePrice,
+                                   total: 0,
+                                   subscriptionApplied: isSubApplied
+                                 }]);
+                                 setSelectedService(null);
+                                 setWeight(1);
+                               }}
+                            >Ready for Pickup</button>
                           </div>
                         )}
                       </>
@@ -930,9 +941,13 @@ function App() {
                                   <div style={{ fontSize: '0.62rem', color: '#16a34a', fontWeight: 800, marginTop: '0.15rem' }}>SUBSCRIPTION APPLIED</div>
                                 )}
                               </td>
-                              <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>{item.quantity} {item.unit}</td>
+                              <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                                {item.unit === 'kg' && item.quantity === 0 ? 'Weight pending' : `${item.quantity} ${item.unit}`}
+                              </td>
                               <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>₹{item.price}/{item.unit === 'kg' ? 'kg' : 'pc'}</td>
-                              <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700 }}>₹{item.total}</td>
+                              <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700 }}>
+                                {item.unit === 'kg' && item.quantity === 0 ? '—' : `₹${item.total}`}
+                              </td>
                               <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
                                 <button onClick={() => setCart(cart.filter(i => i.id !== item.id))}
                                   style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
@@ -945,7 +960,9 @@ function App() {
                         <tfoot>
                           <tr style={{ background: 'rgba(91,62,132,0.06)', fontWeight: 800, fontSize: '1.05rem' }}>
                             <td colSpan="4" style={{ padding: '0.9rem 1rem', textAlign: 'right' }}>Grand Total</td>
-                            <td style={{ padding: '0.9rem 1rem', textAlign: 'right', color: 'var(--color-primary)' }}>₹{calculateTotal()}</td>
+                            <td style={{ padding: '0.9rem 1rem', textAlign: 'right', color: 'var(--color-primary)' }}>
+                              {calculateTotal() > 0 ? `₹${calculateTotal()}` : 'Weight pending'}
+                            </td>
                             <td></td>
                           </tr>
                         </tfoot>
@@ -992,8 +1009,15 @@ function App() {
                   </div>
                   <div className="summary-row" style={{ borderTop: "1px solid var(--color-border)", paddingTop: "0.5rem", marginTop: "0.5rem", fontWeight: "bold" }}>
                     <span className="summary-label">Grand Total</span>
-                    <span className="summary-value">₹{calculateTotal()}</span>
+                    <span className="summary-value">
+                      {calculateTotal() > 0 ? `₹${calculateTotal()}` : 'Weight pending'}
+                    </span>
                   </div>
+                  {calculateTotal() === 0 && (
+                     <div style={{ fontSize: '0.75rem', color: '#b6a3ce', marginTop: '-0.25rem', marginBottom: '0.5rem', textAlign: 'right' }}>
+                       Final price will be updated after pickup
+                     </div>
+                  )}
                   <div className="summary-row">
                     <span className="summary-label">Address</span>
                     <span className="summary-value" style={{ textAlign: 'right', maxWidth: '60%' }}>{orderDetails.address}</span>

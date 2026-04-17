@@ -8,6 +8,7 @@ function getStatusStyle(status) {
   const s = (status || '').toLowerCase();
   const map = {
     pending:           { bg: 'rgba(243,156,18,0.12)',   color: '#d97706', border: 'rgba(243,156,18,0.3)',   icon: <Clock size={14} /> },
+    pending_weight:    { bg: 'rgba(155,89,182,0.12)',   color: '#8b5cf6', border: 'rgba(155,89,182,0.3)',   icon: <Zap size={14} /> },
     confirmed:         { bg: 'rgba(41,128,185,0.12)',   color: '#2980b9', border: 'rgba(41,128,185,0.3)',   icon: <CheckCircle size={14} /> },
     processing:        { bg: 'rgba(155,89,182,0.12)',   color: '#8b5cf6', border: 'rgba(155,89,182,0.3)',   icon: <RefreshCw size={14} /> },
     picked:            { bg: 'rgba(41,128,185,0.12)',   color: '#2980b9', border: 'rgba(41,128,185,0.3)',   icon: <Package size={14} /> },
@@ -300,6 +301,7 @@ export default function ProfilePage({ user, onBack, onLogout }) {
               const isExpanded = expandedOrder === order._id;
               const date = new Date(order.createdAt);
               const isCompleted = ['completed', 'delivered'].includes((order.status || '').toLowerCase());
+              const isPendingWeight = order.status === 'pending_weight';
 
               return (
                 <div key={order._id} style={{
@@ -340,11 +342,14 @@ export default function ProfilePage({ user, onBack, onLogout }) {
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 800, fontSize: '1.1rem', color: isCompleted ? '#16a34a' : '#1a1a2e' }}>
-                          ₹{(order.totalAmount || 0).toLocaleString('en-IN')}
+                        <div style={{ fontWeight: 800, fontSize: '1.1rem', color: isPendingWeight ? '#8b5cf6' : (isCompleted ? '#16a34a' : '#1a1a2e') }}>
+                          {isPendingWeight ? 'Weight pending' : `₹${(order.totalAmount || 0).toLocaleString('en-IN')}`}
                         </div>
                         {isCompleted && (
                           <div style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 600 }}>PAID</div>
+                        )}
+                        {isPendingWeight && (
+                          <div style={{ fontSize: '0.65rem', color: '#8b5cf6', fontWeight: 600 }}>TBD AFTER PICKUP</div>
                         )}
                       </div>
 
@@ -356,7 +361,7 @@ export default function ProfilePage({ user, onBack, onLogout }) {
                         background: st.bg, color: st.color,
                         border: `1px solid ${st.border}`,
                       }}>
-                        {st.icon} {order.status || 'Pending'}
+                        {st.icon} {order.status === 'pending_weight' ? 'Weight Pending' : (order.status || 'Pending')}
                       </span>
                     </div>
                   </div>
@@ -368,6 +373,12 @@ export default function ProfilePage({ user, onBack, onLogout }) {
                       padding: '1.25rem 1.5rem',
                       background: 'rgba(91,62,132,0.02)',
                     }}>
+                      {isPendingWeight && (
+                        <div style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '1.25rem', fontSize: '0.85rem', color: '#8b5cf6' }}>
+                          <Zap size={14} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
+                          <strong>Note:</strong> Final weight and price will be updated by our concierge after verification at pickup.
+                        </div>
+                      )}
                       {/* Address & Time */}
                       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
                         <div style={{ flex: 1, minWidth: '180px' }}>
@@ -403,9 +414,13 @@ export default function ProfilePage({ user, onBack, onLogout }) {
                               <tr key={i} style={{ borderBottom: '1px solid rgba(91,62,132,0.05)' }}>
                                 <td style={{ padding: '0.75rem', color: '#1a1a2e', fontWeight: 600 }}>{item.product}</td>
                                 <td style={{ padding: '0.75rem', color: '#5b3e84' }}>{item.service}</td>
-                                <td style={{ padding: '0.75rem', textAlign: 'right', color: '#1a1a2e' }}>{item.quantity} {item.unit || 'pcs'}</td>
-                                <td style={{ padding: '0.75rem', textAlign: 'right', color: '#9488a0' }}>₹{item.price}</td>
-                                <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 700, color: '#5b3e84' }}>₹{item.total}</td>
+                                <td style={{ padding: '0.75rem', textAlign: 'right', color: '#1a1a2e' }}>
+                                   {item.unit === 'kg' && (item.quantity === 0 || item.quantity === null) ? 'Pending' : `${item.quantity} ${item.unit || 'pcs'}`}
+                                </td>
+                                <td style={{ padding: '0.75rem', textAlign: 'right', color: '#9488a0' }}>₹{item.price}{item.unit === 'kg' ? '/kg' : '/pc'}</td>
+                                <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 700, color: '#5b3e84' }}>
+                                   {item.unit === 'kg' && (item.quantity === 0 || item.quantity === null) ? '—' : `₹${item.total}`}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -414,8 +429,8 @@ export default function ProfilePage({ user, onBack, onLogout }) {
                               <td colSpan={4} style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 700, color: '#1a1a2e', fontSize: '0.9rem' }}>
                                 Total Amount
                               </td>
-                              <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 800, fontSize: '1rem', color: isCompleted ? '#16a34a' : '#5b3e84' }}>
-                                ₹{(order.totalAmount || 0).toLocaleString('en-IN')}
+                              <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 800, fontSize: '1rem', color: isPendingWeight ? '#8b5cf6' : (isCompleted ? '#16a34a' : '#5b3e84') }}>
+                                {isPendingWeight ? 'TBD' : `₹${(order.totalAmount || 0).toLocaleString('en-IN')}`}
                               </td>
                             </tr>
                           </tfoot>

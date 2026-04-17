@@ -30,8 +30,12 @@ router.post('/', protect, async (req, res) => {
       return res.status(400).json({ message: 'Required fields missing' });
     }
 
-    // If subscription was applied on the frontend, deduct kg from subscription
-    if (subscriptionApplied && subscriptionKgDeducted > 0) {
+    // Check if any item is KG-based and missing weight
+    const isPendingWeight = items.some(item => item.unit === 'kg' && (item.quantity === null || item.quantity === 0));
+
+    // If subscription was applied on the frontend, deduct kg ONLY if weight is known
+    // If weight is pending, we'll deduct it when the weight is updated by admin
+    if (subscriptionApplied && subscriptionKgDeducted > 0 && !isPendingWeight) {
       await Subscription.findOneAndUpdate(
         { userId: req.user.id, status: 'Active' },
         { $inc: { usedKg: subscriptionKgDeducted } }
@@ -43,9 +47,10 @@ router.post('/', protect, async (req, res) => {
       items,
       address,
       pickupTime: time,
-      totalAmount,
+      totalAmount: isPendingWeight ? 0 : totalAmount,
+      status: isPendingWeight ? 'pending_weight' : 'Pending',
       subscriptionApplied: subscriptionApplied || false,
-      subscriptionKgDeducted: subscriptionKgDeducted || 0
+      subscriptionKgDeducted: isPendingWeight ? 0 : (subscriptionKgDeducted || 0)
     });
 
     res.status(201).json({
@@ -89,13 +94,59 @@ router.get('/all', protect, async (req, res) => {
   }
 });
 
-// Admin: Update order status
+// Admin: Update order status or details (weight)
 router.patch('/:id', protect, async (req, res) => {
   try {
-    const { status } = req.body;
-    const order = await Order.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    const { status, items } = req.body;
+    let updateFields = {};
+    if (status) updateFields.status = status;
+
+    if (items && items.length) {
+      // Find the original order to check for subscription
+      const originalOrder = await Order.findById(req.params.id);
+      if (!originalOrder) return res.status(404).json({ message: 'Order not found' });
+
+      // Calculate new totals for items and the whole order
+      let newTotalAmount = 0;
+      let newSubscriptionKgDeducted = 0;
+
+      const updatedItems = originalOrder.items.map(item => {
+        const update = items.find(i => i._id.toString() === item._id.toString());
+        if (update) {
+          const newQty = update.quantity;
+          const newTotal = item.price * newQty;
+          
+          if (item.unit === 'kg' && originalOrder.subscriptionApplied) {
+            newSubscriptionKgDeducted += newQty;
+          }
+
+          newTotalAmount += newTotal;
+          return { ...item.toObject(), quantity: newQty, total: newTotal };
+        }
+        newTotalAmount += item.total || 0;
+        if (item.unit === 'kg' && originalOrder.subscriptionApplied) {
+          newSubscriptionKgDeducted += item.quantity || 0;
+        }
+        return item;
+      });
+
+      updateFields.items = updatedItems;
+      updateFields.totalAmount = newTotalAmount;
+
+      // Handle subscription deduction if it was pending and we now have weights
+      if (originalOrder.status === 'pending_weight' && originalOrder.subscriptionApplied && newSubscriptionKgDeducted > 0) {
+        await Subscription.findOneAndUpdate(
+          { userId: originalOrder.user, status: 'Active' },
+          { $inc: { usedKg: newSubscriptionKgDeducted } }
+        );
+        updateFields.subscriptionKgDeducted = newSubscriptionKgDeducted;
+      }
+    }
+
+    const order = await Order.findByIdAndUpdate(req.params.id, updateFields, { new: true });
     res.json(order);
   } catch (error) {
+    console.error('Order update error:', error);
     res.status(500).json({ message: 'Error updating order' });
   }
 });

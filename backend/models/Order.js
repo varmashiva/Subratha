@@ -17,16 +17,21 @@ const orderSchema = new mongoose.Schema({
     },
     quantity: {
       type: Number,
-      required: true,
+      required: false, // Made optional for kg-based services initially
       default: 1
+    },
+    unit: {
+      type: String,
+      enum: ['pcs', 'kg'],
+      default: 'pcs'
     },
     price: {
       type: Number,
-      required: true
+      required: false // Made optional for kg-based services initially
     },
     total: {
       type: Number,
-      required: true
+      required: false // Made optional for kg-based services initially
     }
   }],
   totalAmount: {
@@ -44,7 +49,7 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'Confirmed', 'Processing', 'Out for Delivery', 'Completed', 'Cancelled'],
+    enum: ['Pending', 'pending_weight', 'Confirmed', 'Picked', 'Processing', 'Out for Delivery', 'Completed', 'Cancelled'],
     default: 'Pending'
   },
   subscriptionApplied: {

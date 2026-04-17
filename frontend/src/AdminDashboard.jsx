@@ -12,9 +12,12 @@ const API_URL = 'https://subratha.onrender.com/api';
 function StatusBadge({ status }) {
   const colorMap = {
     pending: { bg: 'rgba(243,156,18,.15)', color: '#f39c12', border: '#f39c12' },
+    pending_weight: { bg: 'rgba(155,89,182,.15)', color: '#9b59b6', border: '#8e44ad' },
     picked: { bg: 'rgba(41,128,185,.15)', color: '#3498db', border: '#2980b9' },
+    confirmed: { bg: 'rgba(41,128,185,.15)', color: '#3498db', border: '#2980b9' },
     processing: { bg: 'rgba(155,89,182,.15)', color: '#9b59b6', border: '#8e44ad' },
     delivered: { bg: 'rgba(39,174,96,.15)', color: '#2ecc71', border: '#27ae60' },
+    cancelled: { bg: 'rgba(239,68,68,.15)', color: '#e74c3c', border: '#c0392b' },
   };
   const s = colorMap[status] || colorMap.pending;
   return (
@@ -46,10 +49,12 @@ function Modal({ isOpen, onClose, title, children }) {
 
 function OrdersTab() {
   const [orders, setOrders] = useState([]);
+  const [expanded, setExpanded] = useState(null);
   const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [tempWeights, setTempWeights] = useState({});
 
   const fetchOrders = async () => {
     try {
@@ -63,8 +68,29 @@ function OrdersTab() {
   const updateStatus = async (id, newStatus) => {
     try {
       await axios.patch(`${API_URL}/orders/${id}`, { status: newStatus }, { withCredentials: true });
-      setOrders(prev => prev.map(o => o._id === id ? { ...o, status: newStatus } : o));
+      fetchOrders();
+      setEditing(null);
     } catch (err) { alert('Failed to update status'); }
+  };
+
+  const updateItems = async (id) => {
+    try {
+      const updatedItems = tempWeights[id] || [];
+      await axios.patch(`${API_URL}/orders/${id}`, { items: updatedItems }, { withCredentials: true });
+      fetchOrders();
+      setExpanded(null);
+      setTempWeights(prev => ({ ...prev, [id]: undefined }));
+    } catch (err) { alert('Error updating weights'); }
+  };
+
+  const handleWeightChange = (orderId, itemId, newWeight) => {
+    setTempWeights(prev => {
+      const currentOrder = orders.find(o => o._id === orderId);
+      if (!currentOrder) return prev;
+      const items = prev[orderId] || currentOrder.items.map(i => ({ _id: i._id, quantity: i.quantity }));
+      const updatedItems = items.map(i => i._id === itemId ? { ...i, quantity: parseFloat(newWeight) || 0 } : i);
+      return { ...prev, [orderId]: updatedItems };
+    });
   };
 
   const filtered = orders.filter(o => {
@@ -339,7 +365,15 @@ function PricingTab() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div className="input-group">
               <label className="form-label">Unit</label>
-              <select className="input-field" value={svcForm.unit} onChange={e => setSvcForm({ ...svcForm, unit: e.target.value })}>
+              <select 
+                className="input-field" 
+                value={svcForm.unit} 
+                onChange={e => {
+                  const newUnit = e.target.value;
+                  const newType = newUnit === 'per kg' ? 'Global' : 'Product-based';
+                  setSvcForm({ ...svcForm, unit: newUnit, type: newType });
+                }}
+              >
                 <option value="per kg">per kg</option>
                 <option value="per piece">per piece</option>
               </select>
@@ -347,8 +381,11 @@ function PricingTab() {
             <div className="input-group">
               <label className="form-label">Type</label>
               <select className="input-field" value={svcForm.type} onChange={e => setSvcForm({ ...svcForm, type: e.target.value })}>
-                <option value="Global">Global Service</option>
-                <option value="Product-based">Product-based</option>
+                {svcForm.unit === 'per kg' ? (
+                  <option value="Global">Global Service</option>
+                ) : (
+                  <option value="Product-based">Product-based</option>
+                )}
               </select>
             </div>
           </div>
