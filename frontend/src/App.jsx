@@ -772,8 +772,12 @@ function App() {
                                   }}
                                 >
                                   <div style={{ fontWeight: 800, color: 'var(--color-primary)', fontSize: '0.95rem', marginBottom: '0.4rem' }}>{prod.name}</div>
-                                  <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--color-text)' }}>₹{prod.servicePrice}</div>
-                                  <div style={{ fontSize: '0.75rem', color: '#b6a3ce', textTransform: 'uppercase' }}>per piece</div>
+                                  {selectedService?.type !== 'Global' && (
+                                    <>
+                                      <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--color-text)' }}>₹{prod.servicePrice}</div>
+                                      <div style={{ fontSize: '0.75rem', color: '#b6a3ce', textTransform: 'uppercase' }}>per piece</div>
+                                    </>
+                                  )}
                                   
                                   {isSelected && (
                                     <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }} onClick={e => e.stopPropagation()}>
@@ -796,7 +800,9 @@ function App() {
                                 <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>{selectedService.name} · {quantity} piece{quantity > 1 ? 's' : ''}</div>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                                <div style={{ fontWeight: 900, fontSize: '1.5rem' }}>₹{selectedProduct.servicePrice * quantity}</div>
+                                <div style={{ fontWeight: 900, fontSize: selectedService?.type === 'Global' ? '1.1rem' : '1.5rem' }}>
+                                  {selectedService?.type === 'Global' ? 'Weighed at Pickup' : `₹${selectedProduct.servicePrice * quantity}`}
+                                </div>
                                 <button
                                   className="btn btn-secondary"
                                   style={{ padding: '0.6rem 1.5rem', background: '#fff', color: 'var(--color-primary)', fontWeight: 800 }}
@@ -843,7 +849,9 @@ function App() {
                                           <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{item.service}</div>
                                         </td>
                                         <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 700 }}>{item.quantity}</td>
-                                        <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 800 }}>₹{item.total}</td>
+                                        <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 800 }}>
+                                          {services.find(s => s.name === item.service)?.type === 'Global' ? '-' : `₹${item.total}`}
+                                        </td>
                                         <td style={{ padding: '1rem', textAlign: 'center' }}>
                                           <button onClick={() => setCart(cart.filter(i => i.id !== item.id))} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><X size={18} /></button>
                                         </td>
