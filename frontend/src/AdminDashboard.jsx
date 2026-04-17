@@ -45,6 +45,24 @@ function Modal({ isOpen, onClose, title, children }) {
   );
 }
 
+function LoadingSpinner({ message = 'Loading...' }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem', gap: '1rem', color: '#5b3e84', fontWeight: 600 }}>
+      <div className="spinner spinner-lg"></div>
+      <p>{message}</p>
+    </div>
+  );
+}
+
+function ActionOverlay({ message = 'Processing...' }) {
+  return (
+    <div className="loading-overlay" style={{ background: 'rgba(255, 255, 255, 0.4)', zIndex: 4000 }}>
+      <div className="spinner spinner-lg"></div>
+      <p>{message}</p>
+    </div>
+  );
+}
+
 // ─── TABS ───────────────────────────────────────────────────────────────────────
 
 function OrdersTab() {
@@ -54,6 +72,7 @@ function OrdersTab() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [tempWeights, setTempWeights] = useState({});
 
   const fetchOrders = async () => {
@@ -66,21 +85,23 @@ function OrdersTab() {
   useEffect(() => { fetchOrders(); }, []);
 
   const updateStatus = async (id, newStatus) => {
+    setActionLoading(true);
     try {
       await axios.patch(`${API_URL}/orders/${id}`, { status: newStatus }, { withCredentials: true });
       fetchOrders();
       setEditing(null);
-    } catch (err) { alert('Failed to update status'); }
+    } catch (err) { alert('Failed to update status'); } finally { setActionLoading(false); }
   };
 
   const updateItems = async (id) => {
+    setActionLoading(true);
     try {
       const updatedItems = tempWeights[id] || [];
       await axios.patch(`${API_URL}/orders/${id}`, { items: updatedItems }, { withCredentials: true });
       fetchOrders();
       setExpanded(null);
       setTempWeights(prev => ({ ...prev, [id]: undefined }));
-    } catch (err) { alert('Error updating weights'); }
+    } catch (err) { alert('Error updating weights'); } finally { setActionLoading(false); }
   };
 
   const handleWeightChange = (orderId, itemId, newWeight) => {
@@ -100,10 +121,11 @@ function OrdersTab() {
     return matchSearch && matchStatus;
   });
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', opacity: 0.5 }}>Loading orders...</div>;
+  if (loading) return <LoadingSpinner message="Retrieving orders..." />;
 
   return (
     <div>
+      {actionLoading && <ActionOverlay />}
       <div className="adm-toolbar">
         <div className="adm-search-wrap">
           <Search size={16} />
@@ -158,6 +180,8 @@ function OrdersTab() {
 function PricingTab() {
   const [services, setServices] = useState([]);
   const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [expandedSvc, setExpandedSvc] = useState(null);
 
   // Modals state
@@ -177,30 +201,33 @@ function PricingTab() {
       ]);
       setServices(sRes.data);
       setProducts(pRes.data);
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
   useEffect(() => { fetchData(); }, []);
 
   const saveService = async () => {
+    setActionLoading(true);
     try {
       if (editingSvcId) await axios.put(`${API_URL}/services/${editingSvcId}`, svcForm, { withCredentials: true });
       else await axios.post(`${API_URL}/services`, svcForm, { withCredentials: true });
       setShowServiceModal(false);
       setEditingSvcId(null);
       fetchData();
-    } catch (err) { alert('Error saving service'); }
+    } catch (err) { alert('Error saving service'); } finally { setActionLoading(false); }
   };
 
   const deleteService = async (id) => {
     if (!window.confirm('Delete this service?')) return;
+    setActionLoading(true);
     try {
       await axios.delete(`${API_URL}/services/${id}`, { withCredentials: true });
       fetchData();
-    } catch (err) { alert('Error deleting service'); }
+    } catch (err) { alert('Error deleting service'); } finally { setActionLoading(false); }
   };
 
   const saveProduct = async () => {
+    setActionLoading(true);
     try {
       const existing = products.find(p => p.name.trim().toLowerCase() === prodForm.name.trim().toLowerCase());
       const isGlobal = services.find(s => s.name === prodForm.serviceName)?.type === 'Global';
@@ -223,18 +250,19 @@ function PricingTab() {
     } catch (err) {
       alert('Error saving product: ' + (err.response?.data?.message || err.message));
       console.error(err);
-    }
+    } finally { setActionLoading(false); }
   };
 
   const deleteProductPrice = async (pId, sName) => {
     if (!window.confirm('Remove this product price?')) return;
+    setActionLoading(true);
     try {
       const prod = products.find(p => p._id === pId);
       const filtered = prod.services.filter(s => s.name !== sName);
       if (filtered.length === 0) await axios.delete(`${API_URL}/products/${pId}`, { withCredentials: true });
       else await axios.put(`${API_URL}/products/${pId}`, { services: filtered }, { withCredentials: true });
       fetchData();
-    } catch (err) { alert('Error removing price'); }
+    } catch (err) { alert('Error removing price'); } finally { setActionLoading(false); }
   };
 
   // Group products by service for the UI
@@ -246,8 +274,11 @@ function PricingTab() {
     }));
   };
 
+  if (loading) return <LoadingSpinner message="Building pricing engine..." />;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      {actionLoading && <ActionOverlay />}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 style={{ color: '#5b3e84' }}>Service & Pricing Hierarchy</h3>
         <button className="btn btn-primary" onClick={() => { setEditingSvcId(null); setSvcForm({ name: '', unit: 'per kg', type: 'Global', basePrice: '' }); setShowServiceModal(true); }}>
@@ -428,6 +459,7 @@ function SubscriptionsTab() {
   const [subs, setSubs] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ userId: '', plan: 'Wash & Fold', startDate: '', endDate: '', limitKg: 25, usedKg: 0 });
 
@@ -446,32 +478,36 @@ function SubscriptionsTab() {
 
   const saveSub = async () => {
     if (!form.userId || !form.startDate || !form.endDate) return alert('Fill all fields');
+    setActionLoading(true);
     try {
       await axios.post(`${API_URL}/subscriptions`, form, { withCredentials: true });
       setShowModal(false);
       fetchData();
-    } catch (err) { alert('Error assigning subscription'); }
+    } catch (err) { alert('Error assigning subscription'); } finally { setActionLoading(false); }
   };
 
   const deleteSub = async (id) => {
     if (!window.confirm('Delete this subscription?')) return;
+    setActionLoading(true);
     try {
       await axios.delete(`${API_URL}/subscriptions/${id}`, { withCredentials: true });
       fetchData();
-    } catch (err) { alert('Error deleting'); }
+    } catch (err) { alert('Error deleting'); } finally { setActionLoading(false); }
   };
 
   const resetUsage = async (id) => {
+    setActionLoading(true);
     try {
       await axios.patch(`${API_URL}/subscriptions/${id}/reset`, {}, { withCredentials: true });
       fetchData();
-    } catch (err) { alert('Error resetting'); }
+    } catch (err) { alert('Error resetting'); } finally { setActionLoading(false); }
   };
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center', opacity: 0.5 }}>Loading...</div>;
+  if (loading) return <LoadingSpinner message="Fetching subscriptions..." />;
 
   return (
     <div>
+      {actionLoading && <ActionOverlay />}
       <div className="adm-toolbar">
          <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => {
            setForm({ userId: '', plan: 'Wash & Fold', startDate: '', endDate: '', limitKg: 25, usedKg: 0 });

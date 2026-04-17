@@ -278,10 +278,11 @@ export default function ProfilePage({ user, onBack, onLogout }) {
         {loading ? (
           <div style={{
             background: '#fff', borderRadius: '16px', padding: '4rem',
-            textAlign: 'center', color: '#9488a0',
+            textAlign: 'center', color: '#5b3e84', fontWeight: 600,
             boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem'
           }}>
-            <RefreshCw size={32} style={{ marginBottom: '1rem', opacity: 0.4, animation: 'spin 1s linear infinite' }} />
+            <div className="spinner spinner-lg"></div>
             <p style={{ margin: 0 }}>Loading your orders...</p>
           </div>
         ) : orders.length === 0 ? (

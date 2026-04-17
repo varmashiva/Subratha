@@ -19,6 +19,7 @@ import ProfilePage from './ProfilePage';
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [isSignup, setIsSignup] = useState(false);
@@ -41,16 +42,19 @@ function App() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
-  const [orderStep, setOrderStep] = useState(1);
+  const [orderStep, setOrderStep] = useState(() => Number(localStorage.getItem('orderStep')) || 1);
   const [products, setProducts] = useState([]);
   const [services, setServices] = useState([]);
-  const [cart, setCart] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [selectedService, setSelectedService] = useState(null);
+  const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem('cart')) || []);
+  const [selectedProduct, setSelectedProduct] = useState(null); // Keep for backwards compatibility if needed, but we'll use selectionQuantities for multi-select
+  const [selectionQuantities, setSelectionQuantities] = useState(() => JSON.parse(localStorage.getItem('selectionQuantities')) || {});
+  const [selectedServices, setSelectedServices] = useState([]);
+  const [activeServiceId, setActiveServiceId] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [orderDetails, setOrderDetails] = useState({ address: '', time: '', service: '' });
+  const [orderDetails, setOrderDetails] = useState(() => JSON.parse(localStorage.getItem('orderDetails')) || { address: '', time: '', service: '' });
 
   const fetchProducts = async () => {
+    setIsLoading(true);
     try {
       const [pRes, sRes] = await Promise.all([
         axios.get('https://subratha.onrender.com/api/products'),
@@ -58,8 +62,24 @@ function App() {
       ]);
       setProducts(pRes.data);
       setServices(sRes.data);
+      
+      // Re-hydrate selectedServices from draftOrder (if logged in) or localStorage
+      let savedServiceIds = [];
+      if (user?.draftOrder?.selectedServiceIds) {
+        savedServiceIds = user.draftOrder.selectedServiceIds;
+      } else {
+        savedServiceIds = JSON.parse(localStorage.getItem('selectedServiceIds')) || [];
+      }
+
+      if (savedServiceIds.length > 0) {
+        const found = sRes.data.filter(s => savedServiceIds.includes(s._id));
+        setSelectedServices(found);
+        setActiveServiceId(found[found.length - 1]._id);
+      }
     } catch (err) {
       console.error('Error fetching pricing data:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -74,17 +94,27 @@ function App() {
 
   // Persistent Auth Check
   const checkAuthStatus = async () => {
+    setIsLoading(true);
     try {
       const { data } = await axios.get('https://subratha.onrender.com/api/auth/me', { withCredentials: true });
       if (data.user) {
         setIsAuthenticated(true);
-        setUser({
-          name: data.user.name || 'Shiva Varma',
-          email: data.user.email,
-          picture: data.user.picture || null,
-          role: data.user.role || 'user'
-        });
+        setUser(data.user); // Store the full user object including draftOrder
         fetchActiveSubscription();
+        
+        // Re-hydrate from MongoDB draft order if it exists
+        if (data.user.draftOrder) {
+          const { cart: dbCart, selectionQuantities: dbQty, selectedServiceIds: dbIds, orderStep: dbStep, orderDetails: dbDetails } = data.user.draftOrder;
+          if (dbCart) setCart(dbCart);
+          if (dbQty) setSelectionQuantities(dbQty);
+          if (dbStep) setOrderStep(dbStep);
+          if (dbDetails) setOrderDetails(dbDetails);
+          
+          if (dbIds && dbIds.length > 0) {
+            localStorage.setItem('selectedServiceIds', JSON.stringify(dbIds));
+          }
+        }
+
         const redirect = localStorage.getItem('postAuthRedirect');
         if (redirect) {
           navigate(redirect);
@@ -94,6 +124,40 @@ function App() {
     } catch (err) {
       setIsAuthenticated(false);
       setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const syncDraftOrder = async () => {
+    if (!isAuthenticated) return;
+    try {
+      const draftOrder = {
+        cart,
+        selectionQuantities,
+        selectedServiceIds: selectedServices.map(s => s._id),
+        orderStep,
+        orderDetails
+      };
+      await axios.put('https://subratha.onrender.com/api/auth/draft-order', { draftOrder }, { withCredentials: true });
+    } catch (err) {
+      console.error('Error syncing draft order:', err);
+    }
+  };
+
+  const clearDraftOrder = async () => {
+    if (!isAuthenticated) return;
+    try {
+      const emptyDraft = {
+        cart: [],
+        selectionQuantities: {},
+        selectedServiceIds: [],
+        orderStep: 1,
+        orderDetails: { address: '', time: '', service: '' }
+      };
+      await axios.put('https://subratha.onrender.com/api/auth/draft-order', { draftOrder: emptyDraft }, { withCredentials: true });
+    } catch (err) {
+      console.error('Error clearing draft order:', err);
     }
   };
 
@@ -104,11 +168,17 @@ function App() {
       console.error('Logout error', err);
     }
     localStorage.removeItem('token');
+    localStorage.removeItem('orderStep');
+    localStorage.removeItem('cart');
+    localStorage.removeItem('orderDetails');
+    localStorage.removeItem('selectedServiceIds');
+    localStorage.removeItem('selectionQuantities');
     setIsAuthenticated(false);
     setUser(null);
     setShowProfileDropdown(false);
     navigate('/');
     setCart([]);
+    setSelectionQuantities({});
   };
 
   const calculateTotal = () => {
@@ -116,11 +186,12 @@ function App() {
   };
 
   const handleOrderSubmit = async () => {
+    setIsLoading(true);
     try {
       const totalAmount = calculateTotal();
       const subItems = cart.filter(item => item.subscriptionApplied);
       const subKgDeducted = subItems.reduce((sum, item) => sum + (item.unit === 'kg' ? item.quantity : 0), 0);
-      
+
       const payload = {
         items: cart,
         address: orderDetails.address,
@@ -132,13 +203,28 @@ function App() {
       const response = await axios.post('https://subratha.onrender.com/api/orders', payload, { withCredentials: true });
       if (response.data.success) {
         alert(`Success! Our concierge will arrive for your pickup during ${orderDetails.time}. Total Amount: ₹${totalAmount}`);
+        
+        // Clear everything
+        clearDraftOrder();
+        
         navigate('/');
         setOrderStep(1);
         setOrderDetails({ address: '', time: '' });
+        setCart([]);
+        setSelectionQuantities({});
+        setSelectedServices([]);
+        setActiveServiceId(null);
+        localStorage.removeItem('orderStep');
+        localStorage.removeItem('cart');
+        localStorage.removeItem('orderDetails');
+        localStorage.removeItem('selectedServiceIds');
+        localStorage.removeItem('selectionQuantities');
         fetchActiveSubscription(); // Refresh usage
       }
     } catch (err) {
       alert('Error placing order. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -181,6 +267,25 @@ function App() {
     checkAuthStatus();
     fetchProducts();
   }, []);
+
+  // Sync state to localStorage and MongoDB
+  React.useEffect(() => {
+    localStorage.setItem('cart', JSON.stringify(cart));
+    localStorage.setItem('orderStep', orderStep);
+    localStorage.setItem('orderDetails', JSON.stringify(orderDetails));
+    localStorage.setItem('selectionQuantities', JSON.stringify(selectionQuantities));
+    if (selectedServices.length > 0) {
+      localStorage.setItem('selectedServiceIds', JSON.stringify(selectedServices.map(s => s._id)));
+    } else {
+      localStorage.removeItem('selectedServiceIds');
+    }
+
+    // Debounced sync to MongoDB
+    const timeout = setTimeout(() => {
+      syncDraftOrder();
+    }, 1000);
+    return () => clearTimeout(timeout);
+  }, [cart, orderStep, orderDetails, selectedServices, selectionQuantities]);
 
   React.useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -241,6 +346,12 @@ function App() {
 
   return (
     <>
+      {isLoading && (
+        <div className="loading-overlay">
+          <div className="spinner spinner-lg"></div>
+          <p>Loading...</p>
+        </div>
+      )}
       <Routes>
         <Route path="/admin" element={<AdminDashboard onLogout={() => navigate('/')} />} />
         <Route path="/hotel" element={<HotelDashboard onLogout={() => navigate('/')} />} />
@@ -308,7 +419,9 @@ function App() {
 
           {/* Mobile Menu Overlay */}
           {showMobileMenu && (
-            <div className={`mobile-menu-overlay ${showMobileMenu ? 'active' : ''}`} onClick={() => setShowMobileMenu(false)}>
+            <>
+              <div className={`nav-overlay ${showMobileMenu ? 'active' : ''}`} onClick={() => setShowMobileMenu(false)}></div>
+              <div className={`mobile-menu-overlay ${showMobileMenu ? 'active' : ''}`} onClick={() => setShowMobileMenu(false)}>
               <div className="mobile-menu-content" onClick={(e) => e.stopPropagation()}>
                 <div className="mobile-menu-header">
                   <span className="navbar-brand">Subratha</span>
@@ -341,6 +454,7 @@ function App() {
                 </div>
               </div>
             </div>
+            </>
           )}
         </nav>
       </header>
@@ -560,7 +674,8 @@ function App() {
                       onClick={() => {
                         const s = services.find(gs => gs.name === plan.service);
                         if (s) {
-                          setSelectedService(s);
+                          setSelectedServices([s]);
+                          setActiveServiceId(s._id);
                           handleAction();
                           setOrderStep(1);
                         } else {
@@ -682,9 +797,10 @@ function App() {
 
           <div className="order-step-content" key={orderStep}>
             {orderStep === 1 && (() => {
+              const activeService = services.find(s => s._id === activeServiceId);
               const activeServiceProducts = products
-                .filter(p => p.services.some(s => s.name === selectedService?.name))
-                .map(p => ({ ...p, servicePrice: p.services.find(s => s.name === selectedService?.name).price }));
+                .filter(p => p.services.some(s => s.name === activeService?.name))
+                .map(p => ({ ...p, servicePrice: p.services.find(s => s.name === activeService?.name).price }));
 
               return (
                 <div className="fade-in">
@@ -692,39 +808,67 @@ function App() {
 
                   {/* SERVICE SELECTION CHIPS */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', marginBottom: '2rem' }}>
-                    {services.map(svc => (
-                      <button
-                        key={svc._id}
-                        onClick={() => { setSelectedService(svc); setCart([]); setSelectedProduct(null); setQuantity(1); }}
-                        style={{
-                          padding: '0.6rem 1.25rem', borderRadius: '100px', border: '1px solid',
-                          borderColor: selectedService?._id === svc._id ? 'var(--color-primary)' : 'rgba(91,62,132,0.15)',
-                          background: selectedService?._id === svc._id ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
-                          color: selectedService?._id === svc._id ? '#fff' : 'var(--color-primary)',
-                          cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', transition: 'all 0.2s',
-                          boxShadow: selectedService?._id === svc._id ? '0 4px 12px rgba(91,62,132,0.2)' : 'none'
-                        }}
-                      >
-                        {svc.name}
-                      </button>
-                    ))}
+                    {services.map(svc => {
+                      const isSelected = selectedServices.some(s => s._id === svc._id);
+                      const isActive = activeServiceId === svc._id;
+                      return (
+                        <button
+                          key={svc._id}
+                          onClick={() => {
+                            if (isSelected) {
+                              // If already selected, just make it active to view products
+                              // Or if already active, toggle it OFF selection
+                              if (isActive) {
+                                const newSelected = selectedServices.filter(s => s._id !== svc._id);
+                                setSelectedServices(newSelected);
+                                if (newSelected.length > 0) {
+                                  setActiveServiceId(newSelected[newSelected.length - 1]._id);
+                                } else {
+                                  setActiveServiceId(null);
+                                }
+                              } else {
+                                setActiveServiceId(svc._id);
+                              }
+                            } else {
+                              setSelectedServices([...selectedServices, svc]);
+                              setActiveServiceId(svc._id);
+                            }
+                            setSelectionQuantities({});
+                          }}
+                          style={{
+                            padding: '0.6rem 1.25rem', borderRadius: '100px', border: '1px solid',
+                            borderColor: isActive ? 'var(--color-primary)' : isSelected ? 'rgba(91,62,132,0.4)' : 'rgba(91,62,132,0.15)',
+                            background: isActive ? 'var(--color-primary)' : isSelected ? 'rgba(91,62,132,0.1)' : 'rgba(255,255,255,0.05)',
+                            color: isActive ? '#fff' : 'var(--color-primary)',
+                            cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', transition: 'all 0.2s',
+                            boxShadow: isActive ? '0 4px 12px rgba(91,62,132,0.2)' : 'none',
+                            position: 'relative'
+                          }}
+                        >
+                          {svc.name}
+                          {isSelected && !isActive && (
+                            <span style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'var(--color-primary)', color: '#fff', borderRadius: '50%', width: '16px', height: '16px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
 
-                  {!selectedService ? (
+                  {!activeService ? (
                     <div style={{ textAlign: 'center', padding: '4rem 2rem', color: '#b6a3ce', background: 'rgba(91,62,132,0.03)', borderRadius: '16px', border: '1px dashed rgba(91,62,132,0.2)' }}>
                       Please select a service to continue
                     </div>
-                  ) : selectedService.unit === 'kg' ? (
+                  ) : activeService.unit === 'kg' ? (
                     /* KG-BASED DYNAMIC CONTENT */
                     <div className="fade-in" style={{ background: 'linear-gradient(135deg, rgba(91,62,132,0.08) 0%, rgba(91,62,132,0.03) 100%)', borderRadius: '20px', padding: '2.5rem', border: '1px solid rgba(91,62,132,0.1)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
                         <div>
                           <div style={{ fontSize: '0.85rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 800, marginBottom: '0.5rem' }}>Selected Service</div>
-                          <div style={{ fontWeight: 900, fontSize: '2rem', color: 'var(--color-primary)' }}>{selectedService.name}</div>
+                          <div style={{ fontWeight: 900, fontSize: '2rem', color: 'var(--color-primary)' }}>{activeService.name}</div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           <div style={{ fontSize: '0.85rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 800, marginBottom: '0.5rem' }}>Estimation Rate</div>
-                          <div style={{ fontWeight: 900, fontSize: '2rem', color: 'var(--color-primary)' }}>₹{selectedService.basePrice} / kg</div>
+                          <div style={{ fontWeight: 900, fontSize: '2rem', color: 'var(--color-primary)' }}>₹{activeService.basePrice} / kg</div>
                         </div>
                       </div>
 
@@ -739,7 +883,7 @@ function App() {
                         </div>
                       </div>
 
-                      {activeSub && activeSub.serviceType === selectedService.name && (
+                      {activeSub && activeSub.serviceType === activeService.name && (
                         <div style={{ marginTop: '2rem', background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.3)', borderRadius: '12px', padding: '1.25rem' }}>
                           <div style={{ color: '#16a34a', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <Zap size={20} fill="#16a34a" /> Subscription Active: {activeSub.plan}
@@ -758,11 +902,16 @@ function App() {
                         <>
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
                             {activeServiceProducts.map(prod => {
-                              const isSelected = selectedProduct?._id === prod._id;
+                              const qty = selectionQuantities[prod._id] || 0;
+                              const isSelected = qty > 0;
                               return (
                                 <div
                                   key={prod._id}
-                                  onClick={() => { setSelectedProduct(isSelected ? null : prod); setQuantity(1); }}
+                                  onClick={() => {
+                                    if (!isSelected) {
+                                      setSelectionQuantities({ ...selectionQuantities, [prod._id]: 1 });
+                                    }
+                                  }}
                                   className="product-card"
                                   style={{
                                     background: isSelected ? 'rgba(91,62,132,0.1)' : 'rgba(255,255,255,0.03)',
@@ -772,7 +921,7 @@ function App() {
                                   }}
                                 >
                                   <div style={{ fontWeight: 800, color: 'var(--color-primary)', fontSize: '0.95rem', marginBottom: '0.4rem' }}>{prod.name}</div>
-                                  {selectedService?.type !== 'Global' && (
+                                  {activeService?.type !== 'Global' && (
                                     <>
                                       <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--color-text)' }}>₹{prod.servicePrice}</div>
                                       <div style={{ fontSize: '0.75rem', color: '#b6a3ce', textTransform: 'uppercase' }}>per piece</div>
@@ -781,10 +930,19 @@ function App() {
                                   
                                   {isSelected && (
                                     <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }} onClick={e => e.stopPropagation()}>
-                                      <button onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                      <button onClick={() => {
+                                        const newQty = qty - 1;
+                                        if (newQty <= 0) {
+                                          const newSelection = { ...selectionQuantities };
+                                          delete newSelection[prod._id];
+                                          setSelectionQuantities(newSelection);
+                                        } else {
+                                          setSelectionQuantities({ ...selectionQuantities, [prod._id]: newQty });
+                                        }
+                                      }}
                                         style={{ width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: 'var(--color-primary)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
-                                      <span style={{ fontWeight: 900, minWidth: '24px', fontSize: '1.1rem' }}>{quantity}</span>
-                                      <button onClick={() => setQuantity(quantity + 1)}
+                                      <span style={{ fontWeight: 900, minWidth: '24px', fontSize: '1.1rem' }}>{qty}</span>
+                                      <button onClick={() => setSelectionQuantities({ ...selectionQuantities, [prod._id]: qty + 1 })}
                                         style={{ width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: 'var(--color-primary)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                                     </div>
                                   )}
@@ -793,35 +951,40 @@ function App() {
                             })}
                           </div>
 
-                          {selectedProduct && (
+                          {Object.keys(selectionQuantities).length > 0 && (
                             <div style={{ background: 'var(--color-primary)', borderRadius: '16px', padding: '1.25rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#fff', boxShadow: '0 8px 24px rgba(91,62,132,0.2)' }}>
                               <div>
-                                <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{selectedProduct.name}</div>
-                                <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>{selectedService.name} · {quantity} piece{quantity > 1 ? 's' : ''}</div>
+                                <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{Object.keys(selectionQuantities).length} Items Selected</div>
+                                <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>{activeService.name} · Click '+' to add to bag</div>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                                <div style={{ fontWeight: 900, fontSize: selectedService?.type === 'Global' ? '1.1rem' : '1.5rem' }}>
-                                  {selectedService?.type === 'Global' ? 'Weighed at Pickup' : `₹${selectedProduct.servicePrice * quantity}`}
+                                <div style={{ fontWeight: 900, fontSize: '1.5rem' }}>
+                                  ₹{Object.entries(selectionQuantities).reduce((acc, [id, qty]) => {
+                                    const p = activeServiceProducts.find(prod => prod._id === id);
+                                    return acc + (p?.servicePrice || 0) * qty;
+                                  }, 0)}
                                 </div>
                                 <button
                                   className="btn btn-secondary"
                                   style={{ padding: '0.6rem 1.5rem', background: '#fff', color: 'var(--color-primary)', fontWeight: 800 }}
                                   onClick={() => {
-                                    const newItem = {
-                                      id: Date.now(),
-                                      product: selectedProduct.name,
-                                      service: selectedService.name,
-                                      quantity,
-                                      unit: 'pcs',
-                                      price: selectedProduct.servicePrice,
-                                      total: selectedProduct.servicePrice * quantity,
-                                      subscriptionApplied: false
-                                    };
-                                    setCart([...cart, newItem]);
-                                    setSelectedProduct(null);
-                                    setQuantity(1);
+                                    const newItems = Object.entries(selectionQuantities).map(([id, qty]) => {
+                                      const prod = activeServiceProducts.find(p => p._id === id);
+                                      return {
+                                        id: Date.now() + Math.random(),
+                                        product: prod.name,
+                                        service: activeService.name,
+                                        quantity: qty,
+                                        unit: 'pcs',
+                                        price: prod.servicePrice,
+                                        total: prod.servicePrice * qty,
+                                        subscriptionApplied: false
+                                      };
+                                    });
+                                    setCart([...cart, ...newItems]);
+                                    setSelectionQuantities({});
                                   }}
-                                >Add Item</button>
+                                >Add to Bag</button>
                               </div>
                             </div>
                           )}
@@ -936,7 +1099,7 @@ function App() {
               {orderStep > 1 ? (
                 <button className="btn btn-secondary" style={{ padding: '0.8rem 2rem' }} onClick={() => setOrderStep(orderStep - 1)}>Back</button>
               ) : (
-                <button className="btn btn-secondary" style={{ padding: '0.8rem 2rem' }} onClick={() => setIsOrdering(false)}>Cancel</button>
+                 <button className="btn btn-secondary" style={{ padding: '0.8rem 2rem' }} onClick={() => navigate('/')}>Cancel</button>
               )}
 
               {orderStep < 4 ? (
@@ -944,24 +1107,33 @@ function App() {
                   className="btn btn-primary"
                   style={{ padding: '0.8rem 2rem' }}
                   onClick={() => {
-                    if (orderStep === 1 && selectedService?.unit === 'kg') {
-                      const isSubApplied = activeSub && activeSub.serviceType === selectedService.name;
-                      const newItem = {
-                        id: Date.now(),
-                        product: 'Bulk/Weight',
-                        service: selectedService.name,
-                        quantity: 0, // 0 signifies pending weight
-                        unit: 'kg',
-                        price: isSubApplied ? 0 : selectedService.basePrice,
-                        total: 0,
-                        subscriptionApplied: isSubApplied
-                      };
-                      setCart([newItem]);
+                    if (orderStep === 1) {
+                      const kgServices = selectedServices.filter(s => s.unit === 'kg');
+                      if (kgServices.length > 0) {
+                        const newKgItems = kgServices
+                          .filter(s => !cart.some(item => item.service === s.name && item.unit === 'kg'))
+                          .map(s => {
+                            const isSubApplied = activeSub && activeSub.serviceType === s.name;
+                            return {
+                              id: Date.now() + Math.random(),
+                              product: 'Bulk/Weight',
+                              service: s.name,
+                              quantity: 0,
+                              unit: 'kg',
+                              price: isSubApplied ? 0 : s.basePrice,
+                              total: 0,
+                              subscriptionApplied: !!isSubApplied
+                            };
+                          });
+                        if (newKgItems.length > 0) {
+                          setCart(prev => [...prev, ...newKgItems]);
+                        }
+                      }
                     }
                     setOrderStep(orderStep + 1);
                   }}
                   disabled={
-                    (orderStep === 1 && (!selectedService || (selectedService.unit === 'piece' && cart.length === 0))) ||
+                    (orderStep === 1 && selectedServices.length === 0) ||
                     (orderStep === 2 && !orderDetails.address.trim()) ||
                     (orderStep === 3 && !orderDetails.time)
                   }

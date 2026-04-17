@@ -21,6 +21,13 @@ const userSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  draftOrder: {
+    cart: { type: Array, default: [] },
+    selectionQuantities: { type: Object, default: {} },
+    selectedServiceIds: { type: Array, default: [] },
+    orderStep: { type: Number, default: 1 },
+    orderDetails: { type: Object, default: { address: '', time: '', service: '' } }
   }
 });
 
