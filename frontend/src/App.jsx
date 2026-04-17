@@ -811,7 +811,7 @@ function App() {
 
                 {/* BY WEIGHT (KG) */}
                 {isKgBased && (
-                  <div>
+                  <div className="fade-in">
                     {globalServices.length === 0 ? (
                       <div style={{ textAlign: 'center', padding: '3rem', color: '#b6a3ce', background: 'rgba(91,62,132,0.05)', borderRadius: '12px' }}>
                         No global services configured yet. Add them via the Admin Pricing Engine.
@@ -825,7 +825,7 @@ function App() {
                             return (
                               <div
                                 key={svc._id}
-                                onClick={() => { setSelectedService(isSelected ? null : svc); setWeight(1); }}
+                                onClick={() => { setSelectedService(isSelected ? null : svc); }}
                                 style={{
                                   background: isSelected ? 'rgba(91,62,132,0.12)' : 'rgba(91,62,132,0.04)',
                                   border: `1.5px solid ${isSelected ? 'var(--color-primary)' : 'rgba(91,62,132,0.12)'}`,
@@ -848,66 +848,37 @@ function App() {
                           })}
                         </div>
 
-                        {selectedService && activeSub && activeSub.serviceType === selectedService.name && (
-                          <div style={{ background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.3)', borderRadius: '10px', padding: '1rem', marginBottom: '1rem' }}>
-                            <div style={{ color: '#16a34a', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.25rem' }}>
-                              <Zap size={14} fill="#16a34a" /> Subscription Active — {activeSub.plan}
-                            </div>
-                            <div style={{ fontSize: '0.82rem', color: '#b6a3ce' }}>Used: {activeSub.usedKg}kg / {activeSub.limitKg}kg</div>
-                            {activeSub.usedKg + weight > activeSub.limitKg && (
-                              <div style={{ color: '#d97706', fontSize: '0.8rem', marginTop: '0.3rem', fontWeight: 700 }}>
-                                ⚠️ Exceeded monthly limit — extra weight billed at normal rate.
-                              </div>
-                            )}
-                          </div>
-                        )}
-
                         {selectedService && (
-                          <div style={{ background: 'rgba(91,62,132,0.06)', borderRadius: '12px', padding: '1.25rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+                          <div style={{ background: 'rgba(91,62,132,0.06)', borderRadius: '16px', padding: '2rem', marginTop: '1.5rem', border: '1px solid rgba(91,62,132,0.1)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid rgba(91,62,132,0.1)', paddingBottom: '1.5rem' }}>
                               <div>
-                                <div style={{ fontSize: '0.75rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, marginBottom: '0.25rem' }}>Service</div>
-                                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--color-primary)' }}>{selectedService.name}</div>
+                                <div style={{ fontSize: '0.8rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginBottom: '0.5rem' }}>Selected Service</div>
+                                <div style={{ fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-primary)' }}>{selectedService.name}</div>
                               </div>
                               <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: '0.75rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, marginBottom: '0.25rem' }}>Rate</div>
-                                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--color-primary)' }}>₹{selectedService.basePrice}/kg</div>
+                                <div style={{ fontSize: '0.8rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginBottom: '0.5rem' }}>Pricing</div>
+                                <div style={{ fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-primary)' }}>₹{selectedService.basePrice} / kg</div>
                               </div>
                             </div>
 
-                            <div style={{ background: 'rgba(91,62,132,0.04)', borderRadius: '10px', padding: '1rem', marginBottom: '1.25rem', border: '1px dashed rgba(91,62,132,0.2)' }}>
-                              <p style={{ margin: '0 0 0.4rem', fontSize: '0.85rem', color: '#5b3e84', fontWeight: 600 }}>ℹ️ Measurement Info</p>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                                <div style={{ fontSize: '0.82rem', color: '#b6a3ce', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                  <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--color-primary)' }}></div>
-                                  Final weight will be measured at pickup
-                                </div>
-                                <div style={{ fontSize: '0.82rem', color: '#b6a3ce', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                  <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--color-primary)' }}></div>
-                                  Exact price will be updated after inspection
-                                </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--color-primary)', fontWeight: '600' }}>
+                                <CheckCircle size={20} />
+                                Final weight will be measured at pickup
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--color-primary)', fontWeight: '600' }}>
+                                <CheckCircle size={20} />
+                                Exact price will be updated after inspection
                               </div>
                             </div>
 
-                            <button
-                              className="btn btn-primary"
-                              style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', fontSize: '0.95rem' }}
-                               onClick={() => {
-                                 const isSubApplied = activeSub && activeSub.serviceType === selectedService.name;
-                                 setCart([...cart, {
-                                   id: Date.now(),
-                                   product: 'Bulk/Weight',
-                                   service: selectedService.name,
-                                   quantity: 0, // Using 0 for pending weight
-                                   unit: 'kg',
-                                   price: isSubApplied ? 0 : selectedService.basePrice,
-                                   total: 0,
-                                   subscriptionApplied: isSubApplied
-                                 }]);
-                                 setSelectedService(null);
-                                 setWeight(1);
-                               }}
-                            >Ready for Pickup</button>
+                            {activeSub && activeSub.serviceType === selectedService.name && (
+                              <div style={{ marginTop: '1.5rem', background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.2)', borderRadius: '12px', padding: '1rem' }}>
+                                <div style={{ color: '#16a34a', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+                                  <Zap size={16} fill="#16a34a" /> Subscription Active: {activeSub.plan}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </>
@@ -916,7 +887,8 @@ function App() {
                 )}
 
                 {/* CART TABLE */}
-                {cart.length > 0 && (
+                {!isKgBased && cart.length > 0 && (
+
                   <div style={{ marginTop: '2rem' }} className="fade-in">
                     <h4 style={{ color: 'var(--color-primary)', marginBottom: '0.75rem' }}>Cart ({cart.length} item{cart.length > 1 ? 's' : ''})</h4>
                     <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid rgba(91,62,132,0.12)' }}>
@@ -1038,14 +1010,36 @@ function App() {
               )}
 
               {orderStep < 4 ? (
-                <button className="btn btn-primary" style={{ padding: '0.8rem 2rem' }} onClick={() => setOrderStep(orderStep + 1)} disabled={
-                  (orderStep === 1 && cart.length === 0) ||
-                  (orderStep === 2 && !orderDetails.address.trim()) ||
-                  (orderStep === 3 && !orderDetails.time)
-                }>Next Step</button>
+                <button
+                  className="btn btn-primary"
+                  style={{ padding: '0.8rem 2rem' }}
+                  onClick={() => {
+                    if (orderStep === 1 && isKgBased && selectedService) {
+                      const isSubApplied = activeSub && activeSub.serviceType === selectedService.name;
+                      const newItem = {
+                        id: Date.now(),
+                        product: 'Bulk/Weight',
+                        service: selectedService.name,
+                        quantity: 0, // 0 signifies pending weight
+                        unit: 'kg',
+                        price: isSubApplied ? 0 : selectedService.basePrice,
+                        total: 0,
+                        subscriptionApplied: isSubApplied
+                      };
+                      setCart([newItem]); // In kg mode, we treat it as a single bulk order
+                    }
+                    setOrderStep(orderStep + 1);
+                  }}
+                  disabled={
+                    (orderStep === 1 && (isKgBased ? !selectedService : cart.length === 0)) ||
+                    (orderStep === 2 && !orderDetails.address.trim()) ||
+                    (orderStep === 3 && !orderDetails.time)
+                  }
+                >Next Step</button>
               ) : (
                 <button className="btn btn-primary" style={{ padding: '0.8rem 2rem' }} onClick={handleOrderSubmit}>Confirm Order</button>
               )}
+
             </div>
           </div>
         </main>
