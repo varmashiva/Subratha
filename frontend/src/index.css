@@ -42,6 +42,7 @@
   --space-md: 2rem;
   --space-lg: 4rem;
   --space-xl: 8rem;
+  --space-xv: 7rem;
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -166,6 +167,9 @@ p {
   padding-top: var(--space-xl);
   padding-bottom: var(--space-xl);
   position: relative;
+}
+.subratha-section {
+  padding-bottom: 1rem !important;
 }
 
 .section-divider {
@@ -785,7 +789,7 @@ p {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-top: 8rem;
+  padding-top: 1rem;
 }
 
 .works-sticky-wrapper h2 {
@@ -1105,17 +1109,17 @@ p {
 .site-footer {
   background: var(--color-bg);
   position: relative;
-  padding: var(--space-xl) 0 2rem 0;
+  padding: var(--space-xv) 0 2rem 0;
   margin-top: auto;
 }
 
 .site-footer::before {
   content: "";
   position: absolute;
-  top: 0;
+  top: 3rem;
   left: 50%;
   transform: translateX(-50%);
-  width: 85%;
+  width: 77%;
   height: 1px;
   background: var(--color-border);
 }
@@ -1948,6 +1952,12 @@ p {
 
   .order-actions .btn {
     width: 100%;
+  }
+  .site-footer::before {
+    top: 0.4rem;
+  }
+  .site-footer {
+    padding-top: 5rem;
   }
 }
 

@@ -475,7 +475,7 @@ function App() {
           </div>
 
           {/* Why Subratha Section */}
-          <section className="container section" style={{ paddingTop: 0, paddingBottom: 0 }}>
+          <section className="container section subratha-section" style={{ paddingTop: 0, paddingBottom: 0 }}>
             <div className="scroll-reveal" style={{ transitionDelay: '0.1s' }}>
               <h2 style={{ marginBottom: '0.5rem' }}>Why Subratha?</h2>
               <p>The gold standard in modern laundry & garment care.</p>
@@ -543,7 +543,7 @@ function App() {
                     gap: '1.5rem',
                     textAlign: 'center',
                     background: i === 1 ? 'linear-gradient(135deg, rgba(91,62,132,0.1) 0%, rgba(91,62,132,0.05) 100%)' : 'rgba(255,255,255,0.03)',
-                    border: i === 1 ? '1px solid var(--color-primary)' : '1px solid rgba(255,255,255,0.05)',
+                    border: i === 1 ? '1px solid var(--color-primary)' : '1px solid #5b3e84',
                   }}>
                     <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>{plan.name}</div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.2rem' }}>
@@ -657,11 +657,11 @@ function App() {
           </section>
 
           {/* Section Divider */}
-          <div className="section-divider" style={{ padding: 'var(--space-lg) 0' }}>
+          {/* <div className="section-divider" style={{ padding: 'var(--space-lg) 0' }}>
             <div className="container">
               <hr style={{ border: 'none', borderTop: '1px solid rgba(91, 62, 132, 0.15)', margin: '0 auto', width: '85%' }} />
             </div>
-          </div>
+          </div> */}
 
         </>
       ) : (
@@ -982,11 +982,11 @@ function App() {
       {!isOrdering && (
         <footer className="site-footer fade-in" style={{ animationDelay: '1s' }}>
           {/* Section Divider */}
-          <div className="section-divider" style={{ padding: 'var(--space-lg) 0' }}>
+          {/* <div className="section-divider" style={{ padding: 'var(--space-lg) 0' }}>
             <div className="container">
               <hr style={{ border: 'none', borderTop: '1px solid rgba(91, 62, 132, 0.15)', margin: '0 auto', width: '85%' }} />
             </div>
-          </div>
+          </div> */}
 
           <div className="footer-tagline">
             <p>The gold standard in modern laundry &amp; garment care.</p>
