@@ -38,13 +38,12 @@ function App() {
     else navigate('/');
   };
   const [orderStep, setOrderStep] = useState(1);
-  const [products, setProducts] = useState([]); const [globalServices, setGlobalServices] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [services, setServices] = useState([]);
   const [cart, setCart] = useState([]);
-  const [isKgBased, setIsKgBased] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [weight, setWeight] = useState(1);
   const [orderDetails, setOrderDetails] = useState({ address: '', time: '', service: '' });
 
   const fetchProducts = async () => {
@@ -54,7 +53,7 @@ function App() {
         axios.get('https://subratha.onrender.com/api/services')
       ]);
       setProducts(pRes.data);
-      setGlobalServices(sRes.data.filter(s => s.type === 'Global'));
+      setServices(sRes.data);
     } catch (err) {
       console.error('Error fetching pricing data:', err);
     }
@@ -566,10 +565,9 @@ function App() {
                       className="btn btn-primary"
                       style={{ width: '100%', marginTop: 'auto', padding: '1rem' }}
                       onClick={() => {
-                        const s = globalServices.find(gs => gs.name === plan.service);
+                        const s = services.find(gs => gs.name === plan.service);
                         if (s) {
                           setSelectedService(s);
-                          setIsKgBased(true);
                           handleAction();
                           setOrderStep(1);
                         } else {
@@ -688,84 +686,107 @@ function App() {
           </div>
 
           <div className="order-step-content" key={orderStep}>
-            {orderStep === 1 && (
-              <div className="fade-in">
-                <h3>Add Laundry Items</h3>
+            {orderStep === 1 && (() => {
+              const activeServiceProducts = products
+                .filter(p => p.services.some(s => s.name === selectedService?.name))
+                .map(p => ({ ...p, servicePrice: p.services.find(s => s.name === selectedService?.name).price }));
 
-                {/* Tab Switcher */}
-                <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                  <button
-                    onClick={() => { setIsKgBased(false); setSelectedService(null); setSelectedProduct(null); }}
-                    style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: 'none', background: !isKgBased ? 'var(--color-primary)' : 'rgba(91,62,132,0.1)', color: !isKgBased ? '#fff' : 'var(--color-primary)', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s' }}
-                  >By Item</button>
-                  <button
-                    onClick={() => { setIsKgBased(true); setSelectedService(null); setSelectedProduct(null); }}
-                    style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: 'none', background: isKgBased ? 'var(--color-primary)' : 'rgba(91,62,132,0.1)', color: isKgBased ? '#fff' : 'var(--color-primary)', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s' }}
-                  >By Weight (KG)</button>
-                </div>
+              return (
+                <div className="fade-in">
+                  <h3 style={{ marginBottom: '1.5rem', color: 'var(--color-primary)', fontWeight: 800 }}>Add Laundry Items</h3>
 
-                {/* BY ITEM */}
-                {!isKgBased && (() => {
-                  const productBasedServices = (() => {
-                    const svcNames = new Set();
-                    products.forEach(p => p.services.forEach(s => svcNames.add(s.name)));
-                    return [...svcNames].sort();
-                  })();
-                  const activeServiceName = selectedService?.name || productBasedServices[0] || null;
-                  const activeServiceProducts = products
-                    .filter(p => p.services.some(s => s.name === activeServiceName))
-                    .map(p => ({ ...p, servicePrice: p.services.find(s => s.name === activeServiceName).price }));
+                  {/* SERVICE SELECTION CHIPS */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', marginBottom: '2rem' }}>
+                    {services.map(svc => (
+                      <button
+                        key={svc._id}
+                        onClick={() => { setSelectedService(svc); setCart([]); setSelectedProduct(null); setQuantity(1); }}
+                        style={{
+                          padding: '0.6rem 1.25rem', borderRadius: '100px', border: '1px solid',
+                          borderColor: selectedService?._id === svc._id ? 'var(--color-primary)' : 'rgba(91,62,132,0.15)',
+                          background: selectedService?._id === svc._id ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
+                          color: selectedService?._id === svc._id ? '#fff' : 'var(--color-primary)',
+                          cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', transition: 'all 0.2s',
+                          boxShadow: selectedService?._id === svc._id ? '0 4px 12px rgba(91,62,132,0.2)' : 'none'
+                        }}
+                      >
+                        {svc.name}
+                      </button>
+                    ))}
+                  </div>
 
-                  return (
-                    <div>
-                      {productBasedServices.length === 0 ? (
+                  {!selectedService ? (
+                    <div style={{ textAlign: 'center', padding: '4rem 2rem', color: '#b6a3ce', background: 'rgba(91,62,132,0.03)', borderRadius: '16px', border: '1px dashed rgba(91,62,132,0.2)' }}>
+                      Please select a service to continue
+                    </div>
+                  ) : selectedService.unit === 'kg' ? (
+                    /* KG-BASED DYNAMIC CONTENT */
+                    <div className="fade-in" style={{ background: 'linear-gradient(135deg, rgba(91,62,132,0.08) 0%, rgba(91,62,132,0.03) 100%)', borderRadius: '20px', padding: '2.5rem', border: '1px solid rgba(91,62,132,0.1)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+                        <div>
+                          <div style={{ fontSize: '0.85rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 800, marginBottom: '0.5rem' }}>Selected Service</div>
+                          <div style={{ fontWeight: 900, fontSize: '2rem', color: 'var(--color-primary)' }}>{selectedService.name}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '0.85rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 800, marginBottom: '0.5rem' }}>Estimation Rate</div>
+                          <div style={{ fontWeight: 900, fontSize: '2rem', color: 'var(--color-primary)' }}>₹{selectedService.basePrice} / kg</div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', color: 'var(--color-text)', fontSize: '1.05rem', fontWeight: 600 }}>
+                          <CheckCircle size={20} color="var(--color-primary)" />
+                          <span>Final weight will be measured at pickup</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', color: 'var(--color-text)', fontSize: '1.05rem', fontWeight: 600 }}>
+                          <CheckCircle size={20} color="var(--color-primary)" />
+                          <span>Exact price will be updated after inspection</span>
+                        </div>
+                      </div>
+
+                      {activeSub && activeSub.serviceType === selectedService.name && (
+                        <div style={{ marginTop: '2rem', background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.3)', borderRadius: '12px', padding: '1.25rem' }}>
+                          <div style={{ color: '#16a34a', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <Zap size={20} fill="#16a34a" /> Subscription Active: {activeSub.plan}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* PRODUCT-BASED DYNAMIC CONTENT */
+                    <div className="fade-in">
+                      {activeServiceProducts.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '3rem', color: '#b6a3ce', background: 'rgba(91,62,132,0.05)', borderRadius: '12px' }}>
-                          No products configured yet. Add them via the Admin Pricing Engine.
+                          No products found for this service.
                         </div>
                       ) : (
                         <>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
-                            {productBasedServices.map(sName => (
-                              <button
-                                key={sName}
-                                onClick={() => { setSelectedService({ name: sName }); setSelectedProduct(null); setQuantity(1); }}
-                                style={{
-                                  padding: '0.4rem 1rem', borderRadius: '100px', border: '1px solid',
-                                  borderColor: activeServiceName === sName ? 'var(--color-primary)' : 'rgba(91,62,132,0.2)',
-                                  background: activeServiceName === sName ? 'var(--color-primary)' : 'transparent',
-                                  color: activeServiceName === sName ? '#fff' : 'var(--color-primary)',
-                                  cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s'
-                                }}
-                              >{sName}</button>
-                            ))}
-                          </div>
-
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
                             {activeServiceProducts.map(prod => {
                               const isSelected = selectedProduct?._id === prod._id;
                               return (
                                 <div
                                   key={prod._id}
                                   onClick={() => { setSelectedProduct(isSelected ? null : prod); setQuantity(1); }}
+                                  className="product-card"
                                   style={{
-                                    background: isSelected ? 'rgba(91,62,132,0.12)' : 'rgba(91,62,132,0.04)',
-                                    border: `1.5px solid ${isSelected ? 'var(--color-primary)' : 'rgba(91,62,132,0.12)'}`,
-                                    borderRadius: '12px', padding: '1rem', cursor: 'pointer',
-                                    transition: 'all 0.2s', textAlign: 'center',
-                                    transform: isSelected ? 'translateY(-2px)' : 'none',
-                                    boxShadow: isSelected ? '0 4px 16px rgba(91,62,132,0.15)' : 'none'
+                                    background: isSelected ? 'rgba(91,62,132,0.1)' : 'rgba(255,255,255,0.03)',
+                                    border: `1.5px solid ${isSelected ? 'var(--color-primary)' : 'rgba(91,62,132,0.1)'}`,
+                                    borderRadius: '16px', padding: '1.25rem', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    textAlign: 'center', position: 'relative'
                                   }}
                                 >
-                                  <div style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '0.9rem', marginBottom: '0.35rem' }}>{prod.name}</div>
-                                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#5b3e84' }}>₹{prod.servicePrice}</div>
-                                  <div style={{ fontSize: '0.7rem', color: '#b6a3ce' }}>per piece</div>
+                                  <div style={{ fontWeight: 800, color: 'var(--color-primary)', fontSize: '0.95rem', marginBottom: '0.4rem' }}>{prod.name}</div>
+                                  <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--color-text)' }}>₹{prod.servicePrice}</div>
+                                  <div style={{ fontSize: '0.75rem', color: '#b6a3ce', textTransform: 'uppercase' }}>per piece</div>
+                                  
                                   {isSelected && (
-                                    <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }} onClick={e => e.stopPropagation()}>
+                                    <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }} onClick={e => e.stopPropagation()}>
                                       <button onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                        style={{ width: '26px', height: '26px', borderRadius: '50%', border: 'none', background: 'var(--color-primary)', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
-                                      <span style={{ fontWeight: 700, minWidth: '20px', textAlign: 'center', color: 'var(--color-primary)' }}>{quantity}</span>
+                                        style={{ width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: 'var(--color-primary)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                                      <span style={{ fontWeight: 900, minWidth: '24px', fontSize: '1.1rem' }}>{quantity}</span>
                                       <button onClick={() => setQuantity(quantity + 1)}
-                                        style={{ width: '26px', height: '26px', borderRadius: '50%', border: 'none', background: 'var(--color-primary)', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                                        style={{ width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: 'var(--color-primary)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                                     </div>
                                   )}
                                 </div>
@@ -774,21 +795,21 @@ function App() {
                           </div>
 
                           {selectedProduct && (
-                            <div style={{ background: 'rgba(91,62,132,0.06)', borderRadius: '12px', padding: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                            <div style={{ background: 'var(--color-primary)', borderRadius: '16px', padding: '1.25rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#fff', boxShadow: '0 8px 24px rgba(91,62,132,0.2)' }}>
                               <div>
-                                <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{selectedProduct.name}</span>
-                                <span style={{ color: '#b6a3ce', fontSize: '0.85rem', marginLeft: '0.5rem' }}>{activeServiceName} · {quantity} pc{quantity > 1 ? 's' : ''}</span>
+                                <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{selectedProduct.name}</div>
+                                <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>{selectedService.name} · {quantity} piece{quantity > 1 ? 's' : ''}</div>
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--color-primary)' }}>₹{selectedProduct.servicePrice * quantity}</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                                <div style={{ fontWeight: 900, fontSize: '1.5rem' }}>₹{selectedProduct.servicePrice * quantity}</div>
                                 <button
-                                  className="btn btn-primary"
-                                  style={{ padding: '0.5rem 1.25rem', borderRadius: '8px' }}
+                                  className="btn btn-secondary"
+                                  style={{ padding: '0.6rem 1.5rem', background: '#fff', color: 'var(--color-primary)', fontWeight: 800 }}
                                   onClick={() => {
                                     const newItem = {
                                       id: Date.now(),
                                       product: selectedProduct.name,
-                                      service: activeServiceName,
+                                      service: selectedService.name,
                                       quantity,
                                       unit: 'pcs',
                                       price: selectedProduct.servicePrice,
@@ -799,151 +820,57 @@ function App() {
                                     setSelectedProduct(null);
                                     setQuantity(1);
                                   }}
-                                >+ Add to Cart</button>
+                                >Add Item</button>
+                              </div>
+                            </div>
+                          )}
+
+                          {cart.length > 0 && (
+                            <div className="fade-in" style={{ marginTop: '2.5rem' }}>
+                              <h4 style={{ color: 'var(--color-primary)', fontWeight: 800, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <Shirt size={20} /> Your Selection ({cart.length})
+                              </h4>
+                              <div style={{ overflowX: 'auto', borderRadius: '16px', border: '1px solid rgba(91,62,132,0.1)', background: 'rgba(255,255,255,0.02)' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                  <thead>
+                                    <tr style={{ background: 'rgba(91,62,132,0.05)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                      <th style={{ padding: '1rem', textAlign: 'left' }}>Item</th>
+                                      <th style={{ padding: '1rem', textAlign: 'center' }}>Qty</th>
+                                      <th style={{ padding: '1rem', textAlign: 'right' }}>Total</th>
+                                      <th style={{ padding: '1rem', width: '50px' }}></th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {cart.map(item => (
+                                      <tr key={item.id} style={{ borderTop: '1px solid rgba(91,62,132,0.05)' }}>
+                                        <td style={{ padding: '1rem' }}>
+                                          <div style={{ fontWeight: 700 }}>{item.product}</div>
+                                          <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{item.service}</div>
+                                        </td>
+                                        <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 700 }}>{item.quantity}</td>
+                                        <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 800 }}>₹{item.total}</td>
+                                        <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                          <button onClick={() => setCart(cart.filter(i => i.id !== item.id))} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><X size={18} /></button>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                    <tr style={{ background: 'rgba(91,62,132,0.03)', fontWeight: 900, fontSize: '1.1rem' }}>
+                                      <td colSpan="2" style={{ padding: '1.25rem', textAlign: 'right' }}>Total</td>
+                                      <td style={{ padding: '1.25rem', textAlign: 'right', color: 'var(--color-primary)' }}>₹{calculateTotal()}</td>
+                                      <td></td>
+                                    </tr>
+                                  </tbody>
+                                </table>
                               </div>
                             </div>
                           )}
                         </>
                       )}
                     </div>
-                  );
-                })()}
-
-                {/* BY WEIGHT (KG) */}
-                {isKgBased && (
-                  <div className="fade-in">
-                    {globalServices.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: '3rem', color: '#b6a3ce', background: 'rgba(91,62,132,0.05)', borderRadius: '12px' }}>
-                        No global services configured yet. Add them via the Admin Pricing Engine.
-                      </div>
-                    ) : (
-                      <>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
-                          {globalServices.map(svc => {
-                            const isSubApplicable = activeSub && activeSub.serviceType === svc.name;
-                            const isSelected = selectedService?._id === svc._id;
-                            return (
-                              <div
-                                key={svc._id}
-                                onClick={() => { setSelectedService(isSelected ? null : svc); }}
-                                style={{
-                                  background: isSelected ? 'rgba(91,62,132,0.12)' : 'rgba(91,62,132,0.04)',
-                                  border: `1.5px solid ${isSelected ? 'var(--color-primary)' : 'rgba(91,62,132,0.12)'}`,
-                                  borderRadius: '12px', padding: '1.25rem', cursor: 'pointer',
-                                  transition: 'all 0.2s', position: 'relative',
-                                  transform: isSelected ? 'translateY(-2px)' : 'none',
-                                  boxShadow: isSelected ? '0 4px 16px rgba(91,62,132,0.15)' : 'none'
-                                }}
-                              >
-                                {isSubApplicable && (
-                                  <div style={{ position: 'absolute', top: '0.6rem', right: '0.6rem', background: '#16a34a', color: '#fff', fontSize: '0.6rem', fontWeight: 800, padding: '0.15rem 0.4rem', borderRadius: '100px' }}>SUB</div>
-                                )}
-                                <div style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '1rem', marginBottom: '0.5rem' }}>{svc.name}</div>
-                                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: isSubApplicable ? '#16a34a' : '#5b3e84' }}>
-                                  {isSubApplicable ? '₹0' : `₹${svc.basePrice}`}
-                                </div>
-                                <div style={{ fontSize: '0.75rem', color: '#b6a3ce' }}>{isSubApplicable ? 'subscription included' : 'per kg'}</div>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {selectedService && (
-                          <div style={{ background: 'rgba(91,62,132,0.06)', borderRadius: '16px', padding: '2rem', marginTop: '1.5rem', border: '1px solid rgba(91,62,132,0.1)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid rgba(91,62,132,0.1)', paddingBottom: '1.5rem' }}>
-                              <div>
-                                <div style={{ fontSize: '0.8rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginBottom: '0.5rem' }}>Selected Service</div>
-                                <div style={{ fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-primary)' }}>{selectedService.name}</div>
-                              </div>
-                              <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: '0.8rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginBottom: '0.5rem' }}>Pricing</div>
-                                <div style={{ fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-primary)' }}>₹{selectedService.basePrice} / kg</div>
-                              </div>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--color-primary)', fontWeight: '600' }}>
-                                <CheckCircle size={20} />
-                                Final weight will be measured at pickup
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--color-primary)', fontWeight: '600' }}>
-                                <CheckCircle size={20} />
-                                Exact price will be updated after inspection
-                              </div>
-                            </div>
-
-                            {activeSub && activeSub.serviceType === selectedService.name && (
-                              <div style={{ marginTop: '1.5rem', background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.2)', borderRadius: '12px', padding: '1rem' }}>
-                                <div style={{ color: '#16a34a', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
-                                  <Zap size={16} fill="#16a34a" /> Subscription Active: {activeSub.plan}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {/* CART TABLE */}
-                {!isKgBased && cart.length > 0 && (
-
-                  <div style={{ marginTop: '2rem' }} className="fade-in">
-                    <h4 style={{ color: 'var(--color-primary)', marginBottom: '0.75rem' }}>Cart ({cart.length} item{cart.length > 1 ? 's' : ''})</h4>
-                    <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid rgba(91,62,132,0.12)' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', color: '#5b3e84' }}>
-                        <thead>
-                          <tr style={{ background: 'rgba(91,62,132,0.06)', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                            <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 700 }}>Product</th>
-                            <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 700 }}>Service</th>
-                            <th style={{ padding: '0.75rem 1rem', textAlign: 'center', fontWeight: 700 }}>Qty</th>
-                            <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700 }}>Price</th>
-                            <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700 }}>Total</th>
-                            <th style={{ padding: '0.75rem 1rem', textAlign: 'center', fontWeight: 700 }}></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {cart.map(item => (
-                            <tr key={item.id} style={{ borderTop: '1px solid rgba(91,62,132,0.08)' }}>
-                              <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{item.product}</td>
-                              <td style={{ padding: '0.75rem 1rem' }}>
-                                {item.service}
-                                {item.subscriptionApplied && (
-                                  <div style={{ fontSize: '0.62rem', color: '#16a34a', fontWeight: 800, marginTop: '0.15rem' }}>SUBSCRIPTION APPLIED</div>
-                                )}
-                              </td>
-                              <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
-                                {item.unit === 'kg' && item.quantity === 0 ? 'Weight pending' : `${item.quantity} ${item.unit}`}
-                              </td>
-                              <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>₹{item.price}/{item.unit === 'kg' ? 'kg' : 'pc'}</td>
-                              <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700 }}>
-                                {item.unit === 'kg' && item.quantity === 0 ? '—' : `₹${item.total}`}
-                              </td>
-                              <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
-                                <button onClick={() => setCart(cart.filter(i => i.id !== item.id))}
-                                  style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                                  <X size={16} />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                        <tfoot>
-                          <tr style={{ background: 'rgba(91,62,132,0.06)', fontWeight: 800, fontSize: '1.05rem' }}>
-                            <td colSpan="4" style={{ padding: '0.9rem 1rem', textAlign: 'right' }}>Grand Total</td>
-                            <td style={{ padding: '0.9rem 1rem', textAlign: 'right', color: 'var(--color-primary)' }}>
-                              {calculateTotal() > 0 ? `₹${calculateTotal()}` : 'Weight pending'}
-                            </td>
-                            <td></td>
-                          </tr>
-                        </tfoot>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              );
+            })()}
 
 
 
@@ -1014,7 +941,7 @@ function App() {
                   className="btn btn-primary"
                   style={{ padding: '0.8rem 2rem' }}
                   onClick={() => {
-                    if (orderStep === 1 && isKgBased && selectedService) {
+                    if (orderStep === 1 && selectedService?.unit === 'kg') {
                       const isSubApplied = activeSub && activeSub.serviceType === selectedService.name;
                       const newItem = {
                         id: Date.now(),
@@ -1026,12 +953,12 @@ function App() {
                         total: 0,
                         subscriptionApplied: isSubApplied
                       };
-                      setCart([newItem]); // In kg mode, we treat it as a single bulk order
+                      setCart([newItem]);
                     }
                     setOrderStep(orderStep + 1);
                   }}
                   disabled={
-                    (orderStep === 1 && (isKgBased ? !selectedService : cart.length === 0)) ||
+                    (orderStep === 1 && (!selectedService || (selectedService.unit === 'piece' && cart.length === 0))) ||
                     (orderStep === 2 && !orderDetails.address.trim()) ||
                     (orderStep === 3 && !orderDetails.time)
                   }
