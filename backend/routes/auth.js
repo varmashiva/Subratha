@@ -16,12 +16,12 @@ const sendToken = (user, res) => {
   // Set as cookie
   res.cookie('token', token, {
     httpOnly: true,
-    secure: true, // MUST be true for sameSite: 'none'
+    secure: process.env.NODE_ENV === 'production',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    sameSite: 'none', // Needed if frontend and backend domains are different
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   });
 
-  const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://subratha.com' : 'http://localhost:5173');
+    const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://subratha.com' : 'http://localhost:5173');
   // Redirect back to frontend with a token and flag flag
   res.redirect(`${frontendUrl}/?auth_success=true&token=${token}`);
 };
@@ -36,11 +36,11 @@ router.get(
 router.get(
   '/google/callback',
   (req, res, next) => {
-    const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://subratha.com' : 'http://localhost:5173');
+      const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://subratha.com' : 'http://localhost:5173');
     passport.authenticate('google', { failureRedirect: `${frontendUrl}/?error=auth_failed`, session: false })(req, res, next);
   },
   (req, res) => {
-    const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://subratha.com' : 'http://localhost:5173');
+      const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://subratha.com' : 'http://localhost:5173');
     // On success
     if (req.user) {
       sendToken(req.user, res);

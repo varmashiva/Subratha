@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import Subscription from '../models/Subscription.js';
 import User from '../models/User.js';
@@ -20,11 +21,16 @@ const protect = async (req, res, next) => {
 };
 
 const adminOnly = async (req, res, next) => {
-  if (req.user?.role !== 'admin') {
-    const user = await User.findById(req.user.id);
-    if (!user || user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+  try {
+    if (req.user?.role !== 'admin') {
+      const user = await User.findById(req.user.id);
+      if (!user || user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+    }
+    next();
+  } catch (err) {
+    console.error('Admin middleware error:', err);
+    res.status(500).json({ message: 'Internal server error in admin verification', error: err.message });
   }
-  next();
 };
 
 // ─── USER: Get my active subscription ─────────────────────────────────────────
@@ -44,8 +50,17 @@ router.get('/my', protect, async (req, res) => {
 });
 
 // ─── ADMIN: Get all subscriptions ─────────────────────────────────────────────
-router.get('/', protect, adminOnly, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
+    const authHeader = req.headers.authorization;
+    const token = req.cookies.token || (authHeader && authHeader.split(' ')[1]);
+    if (!token) return res.status(401).json({ message: 'Not authenticated' });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role !== 'admin') {
+      const user = await User.findById(decoded.id);
+      if (!user || user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+    }
+
     // Auto-expire stale subscriptions
     await Subscription.updateMany(
       { endDate: { $lt: new Date() }, status: 'Active' },
@@ -61,8 +76,17 @@ router.get('/', protect, adminOnly, async (req, res) => {
 });
 
 // ─── ADMIN: Get all users (for assign form) ────────────────────────────────────
-router.get('/users', protect, adminOnly, async (req, res) => {
+router.get('/users', async (req, res) => {
   try {
+    const authHeader = req.headers.authorization;
+    const token = req.cookies.token || (authHeader && authHeader.split(' ')[1]);
+    if (!token) return res.status(401).json({ message: 'Not authenticated' });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role !== 'admin') {
+      const user = await User.findById(decoded.id);
+      if (!user || user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+    }
+
     const users = await User.find({ role: 'user' }).select('name email');
     res.json(users);
   } catch (err) {
@@ -71,18 +95,55 @@ router.get('/users', protect, adminOnly, async (req, res) => {
 });
 
 // ─── ADMIN: Assign subscription ───────────────────────────────────────────────
-router.post('/', protect, adminOnly, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
+    // 1. Manually check Authentication (Protect logic)
+    const authHeader = req.headers.authorization;
+    const token = req.cookies.token || (authHeader && authHeader.split(' ')[1]);
+    if (!token) return res.status(401).json({ message: 'Not authenticated' });
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const authUser = decoded;
+    
+    // 2. Manually check Admin status (AdminOnly logic)
+    if (authUser.role !== 'admin') {
+      const user = await User.findById(authUser.id);
+      if (!user || user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // 3. Subscription Creation Logic
     const { userId, plan, startDate, endDate, limitKg, usedKg, status } = req.body;
 
+    if (!userId || !plan || !startDate || !endDate) {
+      return res.status(400).json({ message: 'Missing required fields: userId, plan, startDate, or endDate' });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid User ID format' });
+    }
+
     const SERVICE_MAP = {
-      'Wash & Fold': 'Wash and dry',
-      'Wash & Iron': 'Wash and iron'
+      'Wash & Fold': 'Wash&Fold',
+      'Wash & Iron': 'Wash&Iron',
+      'Wash and dry': 'Wash&Fold',
+      'Wash and iron': 'Wash&Iron'
     };
     const PRICE_MAP = {
       'Wash & Fold': 1999,
-      'Wash & Iron': 2499
+      'Wash & Iron': 2499,
+      'Wash and dry': 1999,
+      'Wash and iron': 2499
     };
+
+    if (!SERVICE_MAP[plan]) {
+      return res.status(400).json({ message: `Invalid plan: ${plan}. Allowed: Wash & Fold, Wash & Iron` });
+    }
+
+    const sDate = new Date(startDate);
+    const eDate = new Date(endDate);
+    if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
+      return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD' });
+    }
 
     // Deactivate any existing active sub for this user
     await Subscription.updateMany({ userId, status: 'Active' }, { status: 'Expired' });
@@ -92,17 +153,23 @@ router.post('/', protect, adminOnly, async (req, res) => {
       plan,
       serviceType: SERVICE_MAP[plan],
       price: PRICE_MAP[plan],
-      limitKg: limitKg || 25,
-      usedKg: usedKg || 0,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
+      limitKg: Number(limitKg) || 25,
+      usedKg: Number(usedKg) || 0,
+      startDate: sDate,
+      endDate: eDate,
       status: status || 'Active'
     });
 
     res.status(201).json({ success: true, subscription: sub });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error creating subscription' });
+    console.error('Subscription Creation Error:', err);
+    const errorMsg = err.name === 'ValidationError' 
+      ? Object.values(err.errors).map(e => e.message).join(', ')
+      : err.message;
+    res.status(500).json({ 
+      message: 'Error creating subscription', 
+      error: errorMsg
+    });
   }
 });
 

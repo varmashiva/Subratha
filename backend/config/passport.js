@@ -10,7 +10,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: 'https://subratha.onrender.com/api/auth/google/callback',
+      callbackURL: `${process.env.BACKEND_URL || 'https://subratha.onrender.com'}/api/auth/google/callback`,
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -28,7 +28,8 @@ passport.use(
         const adminEmails = [
           'gj123.gani@gmail.com',
           'hello@subratha.com',
-          'shivavarma336@gmail.com'
+          'shivavarma336@gmail.com',
+          'chamarthirahul2105@gmail.com'
         ];
 
         const role = adminEmails.includes(email.toLowerCase()) ? 'admin' : 'user';

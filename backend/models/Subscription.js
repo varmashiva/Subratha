@@ -45,11 +45,10 @@ const subscriptionSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Auto-expire based on endDate
-subscriptionSchema.pre('save', function (next) {
+subscriptionSchema.pre('save', async function () {
   if (this.endDate && new Date() > this.endDate) {
     this.status = 'Expired';
   }
-  next();
 });
 
 const Subscription = mongoose.model('Subscription', subscriptionSchema);
