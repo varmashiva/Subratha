@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+// Configure Axios
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'https://subratha.onrender.com';
+
 // Axios Interceptor to attach the token if available
 axios.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
@@ -59,8 +62,8 @@ function App() {
     setIsLoading(true);
     try {
       const [pRes, sRes] = await Promise.all([
-        axios.get('https://subratha.onrender.com/api/products'),
-        axios.get('https://subratha.onrender.com/api/services')
+        axios.get('/api/products'),
+        axios.get('/api/services')
       ]);
       setProducts(pRes.data);
       setServices(sRes.data);
@@ -87,7 +90,7 @@ function App() {
 
   const fetchActiveSubscription = async () => {
     try {
-      const { data } = await axios.get('https://subratha.onrender.com/api/subscriptions/my', { withCredentials: true });
+      const { data } = await axios.get('/api/subscriptions/my', { withCredentials: true });
       setActiveSub(data.subscription);
     } catch (err) {
       console.error('Error fetching active subscription:', err);
@@ -98,7 +101,7 @@ function App() {
   const checkAuthStatus = async () => {
     setIsLoading(true);
     try {
-      const { data } = await axios.get('https://subratha.onrender.com/api/auth/me', { withCredentials: true });
+      const { data } = await axios.get('/api/auth/me', { withCredentials: true });
       if (data.user) {
         setIsAuthenticated(true);
         setUser(data.user); // Store the full user object including draftOrder
@@ -141,7 +144,7 @@ function App() {
         orderStep,
         orderDetails
       };
-      await axios.put('https://subratha.onrender.com/api/auth/draft-order', { draftOrder }, { withCredentials: true });
+      await axios.put('/api/auth/draft-order', { draftOrder }, { withCredentials: true });
     } catch (err) {
       console.error('Error syncing draft order:', err);
     }
@@ -165,7 +168,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await axios.get('https://subratha.onrender.com/api/auth/logout', { withCredentials: true });
+      await axios.get('/api/auth/logout', { withCredentials: true });
     } catch (err) {
       console.error('Logout error', err);
     }
@@ -204,7 +207,7 @@ function App() {
         subscriptionApplied: subItems.length > 0,
         subscriptionKgDeducted: subKgDeducted
       };
-      const response = await axios.post('https://subratha.onrender.com/api/orders', payload, { withCredentials: true });
+      const response = await axios.post('/api/orders', payload, { withCredentials: true });
       if (response.data.success) {
         alert(`Success! Our concierge will arrive for your pickup during ${orderDetails.time}.`);
         
@@ -251,7 +254,7 @@ function App() {
 
   const handleGoogleLogin = () => {
     // Redirect to the backend OAuth route
-    window.location.href = 'https://subratha.onrender.com/api/auth/google';
+    window.location.href = `${axios.defaults.baseURL}/api/auth/google`;
   };
 
   const storyRef = React.useRef(null);
@@ -273,6 +276,17 @@ function App() {
     checkAuthStatus();
     fetchProducts();
   }, []);
+
+  // Auto-select covered service if user has an active subscription
+  React.useEffect(() => {
+    if (activeSub && services.length > 0 && selectedServices.length === 0) {
+      const coveredService = services.find(s => s.name === activeSub.serviceType);
+      if (coveredService) {
+        setSelectedServices([coveredService]);
+        setActiveServiceId(coveredService._id);
+      }
+    }
+  }, [activeSub, services, selectedServices.length]);
 
   // Sync state to localStorage and MongoDB
   React.useEffect(() => {
@@ -815,8 +829,16 @@ function App() {
                 .map(p => ({ ...p, servicePrice: p.services.find(s => s.name === activeService?.name).price }));
 
               const isServiceCovered = (serviceName) => {
-                return (selectedPlan && serviceName === selectedPlan.service) || (activeSub && serviceName === activeSub.serviceType);
+                if (!serviceName) return false;
+                const normalize = (s) => s?.toLowerCase().replace(/[^a-z]/g, '').replace('and', '').replace('ironing', 'iron');
+                const target = normalize(serviceName);
+                
+                const coveredFromPlan = selectedPlan && normalize(selectedPlan.service) === target;
+                const coveredFromSub = activeSub && (normalize(activeSub.serviceType) === target || normalize(activeSub.plan) === target);
+                
+                return !!(coveredFromPlan || coveredFromSub);
               };
+              const isActiveServiceCovered = activeService && isServiceCovered(activeService.name);
 
               // Determine if a covered service is already in the selection (excluding the one being considered)
               const coveredServiceInSelection = selectedServices.find(s => isServiceCovered(s.name));
@@ -882,9 +904,6 @@ function App() {
                         >
                           {isCovered && !isBlockedCoveredService && <Zap size={14} fill={isActive ? '#fff' : '#16a34a'} />}
                           {svc.name}
-                          {isSelected && !isActive && (
-                            <span style={{ position: 'absolute', top: '-5px', right: '-5px', background: isCovered ? '#16a34a' : 'var(--color-primary)', color: '#fff', borderRadius: '50%', width: '16px', height: '16px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</span>
-                          )}
                         </button>
                       );
                     })}
@@ -904,25 +923,6 @@ function App() {
                   )}
 
                   {/* Selected services summary chips */}
-                  {selectedServices.length > 1 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.78rem', color: '#b6a3ce', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Booking:</span>
-                      {selectedServices.map(s => (
-                        <span key={s._id}
-                          onClick={() => setActiveServiceId(s._id)}
-                          style={{
-                            padding: '0.2rem 0.7rem', borderRadius: '100px', fontSize: '0.78rem', fontWeight: 800,
-                            background: activeServiceId === s._id ? 'var(--color-primary)' : isServiceCovered(s.name) ? 'rgba(22,163,74,0.12)' : 'rgba(91,62,132,0.08)',
-                            color: activeServiceId === s._id ? '#fff' : isServiceCovered(s.name) ? '#16a34a' : 'var(--color-primary)',
-                            border: `1px solid ${activeServiceId === s._id ? 'var(--color-primary)' : isServiceCovered(s.name) ? '#16a34a' : 'rgba(91,62,132,0.2)'}`,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {isServiceCovered(s.name) ? '⚡ ' : ''}{s.name}{isServiceCovered(s.name) ? ' · ₹0' : ''}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
               );
 
@@ -1189,13 +1189,57 @@ function App() {
 
                   {/* Active subscription/plan banner */}
                   {(activeSub || selectedPlan) && (
-                    <div className="fade-in" style={{ marginBottom: '1.5rem', background: 'rgba(22,163,74,0.07)', border: '1px solid rgba(22,163,74,0.25)', borderRadius: '12px', padding: '0.9rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <Zap size={18} fill="#16a34a" color="#16a34a" />
-                      <div>
-                        <span style={{ color: '#16a34a', fontWeight: 900, fontSize: '0.9rem' }}>
-                          {activeSub ? `Active Subscription: ${activeSub.serviceType}` : `Plan Selected: ${selectedPlan.name} · ${selectedPlan.service}`}
-                        </span>
-                        <div style={{ color: '#16a34a', fontSize: '0.78rem', opacity: 0.8, marginTop: '0.1rem' }}>Only 1 subscription-covered service can be added per booking</div>
+                    <div className="fade-in" style={{
+                      marginBottom: '2rem',
+                      background: 'linear-gradient(135deg, rgba(22,163,74,0.12) 0%, rgba(22,163,74,0.06) 100%)',
+                      backdropFilter: 'blur(12px)',
+                      WebkitBackdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(22,163,74,0.3)',
+                      borderRadius: '20px',
+                      padding: '1.25rem 1.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '1.25rem',
+                      boxShadow: '0 10px 30px -5px rgba(22, 163, 74, 0.15)',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '14px',
+                        background: 'rgba(22,163,74,0.15)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        boxShadow: 'inset 0 0 10px rgba(22,163,74,0.2)'
+                      }}>
+                        <Zap size={22} fill="#16a34a" color="#16a34a" />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
+                          <span style={{
+                            background: '#16a34a',
+                            color: '#fff',
+                            fontSize: '0.65rem',
+                            fontWeight: 900,
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '100px',
+                            letterSpacing: '0.06em',
+                            textTransform: 'uppercase'
+                          }}>
+                            {activeSub ? 'Active Member' : 'Plan Selected'}
+                          </span>
+                          <span style={{ color: '#16a34a', fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.01em' }}>
+                            {activeSub ? activeSub.plan : selectedPlan.name}
+                          </span>
+                        </div>
+                        <div style={{ color: '#16a34a', fontSize: '0.85rem', fontWeight: 500, opacity: 0.9 }}>
+                          {isActiveServiceCovered 
+                            ? 'COVERED UNDER YOUR SUBSCRIPTION · TOTAL: ₹0' 
+                            : 'NOT INCLUDED IN YOUR SUBSCRIPTION · NORMAL PRICING APPLIES'}
+                        </div>
                       </div>
                     </div>
                   )}

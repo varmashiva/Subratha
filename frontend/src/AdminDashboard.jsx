@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 // API Config
-const API_URL = 'https://subratha.onrender.com/api';
+const API_URL = '/api';
 
 // ─── HELPERS ───────────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
@@ -483,7 +483,10 @@ function SubscriptionsTab() {
       await axios.post(`${API_URL}/subscriptions`, form, { withCredentials: true });
       setShowModal(false);
       fetchData();
-    } catch (err) { alert('Error assigning subscription'); } finally { setActionLoading(false); }
+    } catch (err) { 
+      const msg = err.response?.data?.error || err.response?.data?.message || err.message;
+      alert('Error assigning subscription: ' + msg); 
+    } finally { setActionLoading(false); }
   };
 
   const deleteSub = async (id) => {
