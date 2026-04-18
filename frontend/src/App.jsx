@@ -9,7 +9,7 @@ axios.interceptors.request.use((config) => {
   }
   return config;
 });
-import { X, LogIn, Waves, Shirt, Zap, Tag, ShieldCheck, Award, MapPin, CheckCircle, Clock, User, Menu } from 'lucide-react';
+import { X, LogIn, Waves, Shirt, Zap, Tag, ShieldCheck, Award, MapPin, CheckCircle, Clock, User, Menu, AlertCircle } from 'lucide-react';
 import './index.css';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import HotelDashboard from './HotelDashboard';
