@@ -52,6 +52,7 @@ function App() {
   const [activeServiceId, setActiveServiceId] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [orderDetails, setOrderDetails] = useState(() => JSON.parse(localStorage.getItem('orderDetails')) || { address: '', time: '', service: '' });
+  const [selectedPlan, setSelectedPlan] = useState(() => JSON.parse(localStorage.getItem('selectedPlan')) || null);
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -179,6 +180,8 @@ function App() {
     navigate('/');
     setCart([]);
     setSelectionQuantities({});
+    setSelectedPlan(null);
+    localStorage.removeItem('selectedPlan');
   };
 
   const calculateTotal = () => {
@@ -202,7 +205,7 @@ function App() {
       };
       const response = await axios.post('https://subratha.onrender.com/api/orders', payload, { withCredentials: true });
       if (response.data.success) {
-        alert(`Success! Our concierge will arrive for your pickup during ${orderDetails.time}. Total Amount: ₹${totalAmount}`);
+        alert(`Success! Our concierge will arrive for your pickup during ${orderDetails.time}.`);
         
         // Clear everything
         clearDraftOrder();
@@ -214,6 +217,8 @@ function App() {
         setSelectionQuantities({});
         setSelectedServices([]);
         setActiveServiceId(null);
+        setSelectedPlan(null);
+        localStorage.removeItem('selectedPlan');
         localStorage.removeItem('orderStep');
         localStorage.removeItem('cart');
         localStorage.removeItem('orderDetails');
@@ -274,6 +279,11 @@ function App() {
     localStorage.setItem('orderStep', orderStep);
     localStorage.setItem('orderDetails', JSON.stringify(orderDetails));
     localStorage.setItem('selectionQuantities', JSON.stringify(selectionQuantities));
+    if (selectedPlan) {
+      localStorage.setItem('selectedPlan', JSON.stringify(selectedPlan));
+    } else {
+      localStorage.removeItem('selectedPlan');
+    }
     if (selectedServices.length > 0) {
       localStorage.setItem('selectedServiceIds', JSON.stringify(selectedServices.map(s => s._id)));
     } else {
@@ -668,23 +678,24 @@ function App() {
                         <CheckCircle size={18} color="var(--color-primary)" /> Applies to: {plan.service}
                       </li>
                     </ul>
-                    <button
-                      className="btn btn-primary"
-                      style={{ width: '100%', marginTop: 'auto', padding: '1rem' }}
-                      onClick={() => {
-                        const s = services.find(gs => gs.name === plan.service);
-                        if (s) {
-                          setSelectedServices([s]);
-                          setActiveServiceId(s._id);
-                          handleAction();
-                          setOrderStep(1);
-                        } else {
-                          handleAction();
-                        }
-                      }}
-                    >
-                      Choose Plan
-                    </button>
+                      <button
+                        className="btn btn-primary"
+                        style={{ width: '100%', marginTop: 'auto', padding: '1rem' }}
+                        onClick={() => {
+                          const s = services.find(gs => gs.name === plan.service);
+                          setSelectedPlan({ name: plan.name, service: plan.service });
+                          if (s) {
+                            setSelectedServices([s]);
+                            setActiveServiceId(s._id);
+                            handleAction();
+                            setOrderStep(1);
+                          } else {
+                            handleAction();
+                          }
+                        }}
+                      >
+                        Choose Plan
+                      </button>
                   </div>
                 ))}
               </div>
@@ -805,6 +816,15 @@ function App() {
               return (
                 <div className="fade-in">
                   <h3 style={{ marginBottom: '1.5rem', color: 'var(--color-primary)', fontWeight: 800 }}>Add Laundry Items</h3>
+
+                  {selectedPlan && activeService?.name === selectedPlan.service && (
+                    <div className="fade-in" style={{ marginBottom: '1.5rem', background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.3)', borderRadius: '12px', padding: '1.25rem' }}>
+                      <div style={{ color: '#16a34a', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <Zap size={20} fill="#16a34a" /> Subscription Plan Selected: {selectedPlan.name}
+                      </div>
+                      <div style={{ color: '#16a34a', fontSize: '0.85rem', marginTop: '0.2rem', fontWeight: 600 }}>This service is covered under your subscription</div>
+                    </div>
+                  )}
 
                   {/* SERVICE SELECTION CHIPS */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', marginBottom: '2rem' }}>
@@ -1013,18 +1033,26 @@ function App() {
                                         </td>
                                         <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 700 }}>{item.quantity}</td>
                                         <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 800 }}>
-                                          {services.find(s => s.name === item.service)?.type === 'Global' ? '-' : `₹${item.total}`}
+                                          {(() => {
+                                            const svc = services.find(s => s.name === item.service);
+                                            const isSubscribed = (selectedPlan && item.service === selectedPlan.service) || (activeSub && item.service === activeSub.serviceType);
+                                            
+                                            if (svc?.type === 'Global' || item.unit === 'kg') {
+                                              return isSubscribed ? '₹0 (Covered)' : `₹${svc?.basePrice || item.price}/kg`;
+                                            }
+                                            return isSubscribed ? '₹0 (Covered)' : `₹${item.total}`;
+                                          })()}
                                         </td>
                                         <td style={{ padding: '1rem', textAlign: 'center' }}>
                                           <button onClick={() => setCart(cart.filter(i => i.id !== item.id))} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><X size={18} /></button>
                                         </td>
                                       </tr>
                                     ))}
-                                    <tr style={{ background: 'rgba(91,62,132,0.03)', fontWeight: 900, fontSize: '1.1rem' }}>
-                                      <td colSpan="2" style={{ padding: '1.25rem', textAlign: 'right' }}>Total</td>
-                                      <td style={{ padding: '1.25rem', textAlign: 'right', color: 'var(--color-primary)' }}>₹{calculateTotal()}</td>
-                                      <td></td>
-                                    </tr>
+                                    <tr style={{ background: 'rgba(91,62,132,0.03)', fontWeight: 700, fontSize: '0.9rem' }}>
+                                       <td colSpan="4" style={{ padding: '1.25rem', textAlign: 'center', color: 'var(--color-primary)' }}>
+                                         Total price will be finaled in review process
+                                       </td>
+                                     </tr>
                                   </tbody>
                                 </table>
                               </div>
@@ -1072,17 +1100,11 @@ function App() {
                     <span className="summary-label">Items</span>
                     <span className="summary-value" style={{ textAlign: "right" }}>{cart.length} item(s)</span>
                   </div>
-                  <div className="summary-row" style={{ borderTop: "1px solid var(--color-border)", paddingTop: "0.5rem", marginTop: "0.5rem", fontWeight: "bold" }}>
-                    <span className="summary-label">Grand Total</span>
-                    <span className="summary-value">
-                      {calculateTotal() > 0 ? `₹${calculateTotal()}` : 'Weight pending'}
+                  <div className="summary-row" style={{ borderTop: "1px solid var(--color-border)", paddingTop: "1rem", marginTop: "0.5rem", justifyContent: 'center' }}>
+                    <span className="summary-value" style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>
+                      Total price will be finaled in review process
                     </span>
                   </div>
-                  {calculateTotal() === 0 && (
-                     <div style={{ fontSize: '0.75rem', color: '#b6a3ce', marginTop: '-0.25rem', marginBottom: '0.5rem', textAlign: 'right' }}>
-                       Final price will be updated after pickup
-                     </div>
-                  )}
                   <div className="summary-row">
                     <span className="summary-label">Address</span>
                     <span className="summary-value" style={{ textAlign: 'right', maxWidth: '60%' }}>{orderDetails.address}</span>
@@ -1099,7 +1121,11 @@ function App() {
               {orderStep > 1 ? (
                 <button className="btn btn-secondary" style={{ padding: '0.8rem 2rem' }} onClick={() => setOrderStep(orderStep - 1)}>Back</button>
               ) : (
-                 <button className="btn btn-secondary" style={{ padding: '0.8rem 2rem' }} onClick={() => navigate('/')}>Cancel</button>
+                  <button className="btn btn-secondary" style={{ padding: '0.8rem 2rem' }} onClick={() => {
+                    setSelectedPlan(null);
+                    localStorage.removeItem('selectedPlan');
+                    navigate('/');
+                  }}>Cancel</button>
               )}
 
               {orderStep < 4 ? (
