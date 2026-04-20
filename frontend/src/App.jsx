@@ -738,7 +738,12 @@ function App() {
                             style={{ width: '100%', marginTop: 'auto', padding: '1rem' }}
                             onClick={() => {
                               const s = services.find(gs => gs.name === plan.service);
-                              setSelectedPlan({ name: plan.name, service: plan.service });
+                              setSelectedPlan({ 
+                                name: plan.name, 
+                                service: plan.service,
+                                totalLimit: parseInt(plan.weight),
+                                used: 0
+                              });
                               if (s) {
                                 setSelectedServices([s]);
                                 setActiveServiceId(s._id);
