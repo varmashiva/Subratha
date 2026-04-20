@@ -562,7 +562,7 @@ function App() {
                     {
                       step: 1,
                       label: "Everyday Care",
-                      title: "Wash and dry",
+                      title: "Wash and fold",
                       desc: "Perfectly cleaned and dried everyday wear for maximum comfort and hygiene, delivered fresh to your door.",
                       img: "/images/service-1.jpg"
                     },
@@ -665,7 +665,7 @@ function App() {
                 name: "Wash & Fold",
                 price: "1999",
                 weight: "25kg",
-                service: "Wash and dry",
+                service: "Wash and fold",
                 features: ["Eco-friendly Wash", "Careful Folding", "Free Pickup & Delivery"]
               },
               {
