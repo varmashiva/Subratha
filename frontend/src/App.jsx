@@ -28,7 +28,7 @@ function App() {
   const [isSignup, setIsSignup] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [globalScrollProgress, setGlobalScrollProgress] = useState(0);
-  const [activeSub, setActiveSub] = useState(null);
+  const [subscriptions, setSubscriptions] = useState([]);
 
   // Order Flow State
   const navigate = useNavigate();
@@ -91,9 +91,9 @@ function App() {
   const fetchActiveSubscription = async () => {
     try {
       const { data } = await axios.get('/api/subscriptions/my', { withCredentials: true });
-      setActiveSub(data.subscription);
+      setSubscriptions(data.subscriptions || []);
     } catch (err) {
-      console.error('Error fetching active subscription:', err);
+      console.error('Error fetching active subscriptions:', err);
     }
   };
 
@@ -828,45 +828,43 @@ function App() {
                 .filter(p => p.services.some(s => s.name === activeService?.name))
                 .map(p => ({ ...p, servicePrice: p.services.find(s => s.name === activeService?.name).price }));
 
-              const isServiceCovered = (serviceName) => {
-                if (!serviceName) return false;
+              const getServiceSubscription = (serviceName) => {
+                if (!serviceName || !subscriptions) return null;
                 const normalize = (s) => s?.toLowerCase().replace(/[^a-z]/g, '').replace('and', '').replace('ironing', 'iron');
                 const target = normalize(serviceName);
                 
-                const coveredFromPlan = selectedPlan && normalize(selectedPlan.service) === target;
-                const coveredFromSub = activeSub && (normalize(activeSub.serviceType) === target || normalize(activeSub.plan) === target);
-                
-                return !!(coveredFromPlan || coveredFromSub);
-              };
-              const isActiveServiceCovered = activeService && isServiceCovered(activeService.name);
+                // Check active subscriptions
+                const sub = subscriptions.find(s => 
+                  s.status === 'Active' && 
+                  (normalize(s.service) === target || normalize(s.plan) === target)
+                );
+                if (sub) return sub;
 
-              // Determine if a covered service is already in the selection (excluding the one being considered)
-              const coveredServiceInSelection = selectedServices.find(s => isServiceCovered(s.name));
+                // Check selectedPlan (legacy/temporary)
+                if (selectedPlan && normalize(selectedPlan.service) === target) {
+                  return { ...selectedPlan, isTemporary: true };
+                }
+                
+                return null;
+              };
+
+              const isServiceCovered = (serviceName) => !!getServiceSubscription(serviceName);
+              const isActiveServiceCovered = activeService && isServiceCovered(activeService.name);
 
               const handleChipClick = (svc) => {
                 const isSelected = selectedServices.some(s => s._id === svc._id);
                 const isActive = activeServiceId === svc._id;
-                const isCovered = isServiceCovered(svc.name);
 
                 if (isSelected) {
-                  // If clicking the active chip — deselect it
                   if (isActive) {
                     const newSelected = selectedServices.filter(s => s._id !== svc._id);
                     setSelectedServices(newSelected);
                     setActiveServiceId(newSelected.length > 0 ? newSelected[newSelected.length - 1]._id : null);
                   } else {
-                    // Switch active view to this chip
                     setActiveServiceId(svc._id);
                   }
                   setSelectionQuantities({});
                 } else {
-                  // Trying to add a new service
-                  // Block if: this service is covered AND another covered service is already selected
-                  if (isCovered && coveredServiceInSelection && coveredServiceInSelection._id !== svc._id) {
-                    setShowSubConflictWarning(true);
-                    setTimeout(() => setShowSubConflictWarning(false), 3500);
-                    return;
-                  }
                   setSelectedServices([...selectedServices, svc]);
                   setActiveServiceId(svc._id);
                   setSelectionQuantities({});
@@ -880,66 +878,54 @@ function App() {
                       const isSelected = selectedServices.some(s => s._id === svc._id);
                       const isActive = activeServiceId === svc._id;
                       const isCovered = isServiceCovered(svc.name);
-                      // Disable chip if: this covered service is blocked because another covered service is already selected
-                      const isBlockedCoveredService = isCovered && !isSelected && coveredServiceInSelection && coveredServiceInSelection._id !== svc._id;
 
                       return (
                         <button
                           key={svc._id}
                           onClick={() => handleChipClick(svc)}
-                          disabled={isBlockedCoveredService}
-                          title={isBlockedCoveredService ? 'Only 1 subscription-covered service allowed per booking' : ''}
                           style={{
                             padding: '0.6rem 1.25rem', borderRadius: '100px', border: '1px solid',
-                            borderColor: isBlockedCoveredService ? 'rgba(91,62,132,0.1)' : isActive ? 'var(--color-primary)' : isCovered ? '#16a34a' : isSelected ? 'rgba(91,62,132,0.4)' : 'rgba(91,62,132,0.15)',
-                            background: isBlockedCoveredService ? 'rgba(255,255,255,0.02)' : isActive ? 'var(--color-primary)' : isSelected ? 'rgba(91,62,132,0.1)' : 'rgba(255,255,255,0.05)',
-                            color: isBlockedCoveredService ? 'rgba(182,163,206,0.4)' : isActive ? '#fff' : isCovered ? '#16a34a' : 'var(--color-primary)',
-                            cursor: isBlockedCoveredService ? 'not-allowed' : 'pointer',
+                            borderColor: isActive ? 'var(--color-primary)' : isCovered ? '#16a34a' : isSelected ? 'rgba(91,62,132,0.4)' : 'rgba(91,62,132,0.15)',
+                            background: isActive ? 'var(--color-primary)' : isSelected ? 'rgba(91,62,132,0.1)' : 'rgba(255,255,255,0.05)',
+                            color: isActive ? '#fff' : isCovered ? '#16a34a' : 'var(--color-primary)',
+                            cursor: 'pointer',
                             fontWeight: 700, fontSize: '0.9rem', transition: 'all 0.2s',
-                            boxShadow: isCovered && !isBlockedCoveredService ? '0 0 10px rgba(22,163,74,0.15)' : isActive ? '0 4px 12px rgba(91,62,132,0.2)' : 'none',
+                            boxShadow: isCovered ? '0 0 10px rgba(22,163,74,0.15)' : isActive ? '0 4px 12px rgba(91,62,132,0.2)' : 'none',
                             position: 'relative',
                             display: 'flex', alignItems: 'center', gap: '0.4rem',
-                            opacity: isBlockedCoveredService ? 0.45 : 1,
                           }}
                         >
-                          {isCovered && !isBlockedCoveredService && <Zap size={14} fill={isActive ? '#fff' : '#16a34a'} />}
+                          {isCovered && <Zap size={14} fill={isActive ? '#fff' : '#16a34a'} />}
                           {svc.name}
                         </button>
                       );
                     })}
                   </div>
-
-                  {/* Subscription conflict warning */}
-                  {showSubConflictWarning && (
-                    <div className="fade-in" style={{
-                      display: 'flex', alignItems: 'center', gap: '0.6rem',
-                      background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
-                      borderRadius: '10px', padding: '0.75rem 1rem',
-                      color: '#ef4444', fontSize: '0.85rem', fontWeight: 700,
-                    }}>
-                      <AlertCircle size={16} />
-                      Only 1 subscription-covered service is allowed per booking. Deselect the current covered service first.
-                    </div>
-                  )}
-
-                  {/* Selected services summary chips */}
                 </div>
               );
 
               const renderKgContent = () => {
-                const isCovered = isServiceCovered(activeService.name);
+                const sub = getServiceSubscription(activeService.name);
+                const isCovered = !!sub;
+                const remaining = sub ? Math.max(0, sub.totalLimit - sub.used) : 0;
+                const isLimitExceeded = sub && sub.used >= sub.totalLimit;
+
                 return (
                   <div className="fade-in" style={{ 
-                    background: isCovered ? 'linear-gradient(135deg, rgba(22,163,74,0.08) 0%, rgba(22,163,74,0.03) 100%)' : 'linear-gradient(135deg, rgba(91,62,132,0.08) 0%, rgba(91,62,132,0.03) 100%)', 
+                    background: (isCovered && !isLimitExceeded) ? 'linear-gradient(135deg, rgba(22,163,74,0.08) 0%, rgba(22,163,74,0.03) 100%)' : 'linear-gradient(135deg, rgba(91,62,132,0.08) 0%, rgba(91,62,132,0.03) 100%)', 
                     borderRadius: '20px', 
                     padding: '2.5rem', 
-                    border: `1px solid ${isCovered ? 'rgba(22,163,74,0.4)' : 'rgba(91,62,132,0.1)'}`,
+                    border: `1px solid ${(isCovered && !isLimitExceeded) ? 'rgba(22,163,74,0.4)' : 'rgba(91,62,132,0.1)'}`,
                     position: 'relative',
                     overflow: 'hidden'
                   }}>
-                    {isCovered ? (
+                    {isCovered && !isLimitExceeded ? (
                       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: 'linear-gradient(90deg, #16a34a, #15803d)', color: 'white', padding: '0.5rem 1rem', fontSize: '0.75rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.5rem', letterSpacing: '0.05em' }}>
-                        <Zap size={14} fill="white" /> COVERED UNDER YOUR SUBSCRIPTION · TOTAL: ₹0
+                        <Zap size={14} fill="white" /> COVERED UNDER YOUR SUBSCRIPTION · REMAINING: {remaining} KG · TOTAL: ₹0
+                      </div>
+                    ) : isLimitExceeded ? (
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: '#f59e0b', color: 'white', padding: '0.5rem 1rem', fontSize: '0.75rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.5rem', letterSpacing: '0.05em' }}>
+                        <AlertCircle size={14} /> SUBSCRIPTION LIMIT EXCEEDED · NORMAL PRICING APPLIES
                       </div>
                     ) : (
                       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: 'rgba(91,62,132,0.08)', color: 'var(--color-text)', opacity: 0.7, padding: '0.5rem 1rem', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -954,33 +940,63 @@ function App() {
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: '0.85rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 800, marginBottom: '0.5rem' }}>Estimation Rate</div>
-                        <div style={{ fontWeight: 900, fontSize: '2rem', color: isCovered ? '#16a34a' : 'var(--color-primary)' }}>
-                          {isCovered ? 'Rs. 0 (Included)' : `Rs. ${activeService.basePrice} / kg`}
+                        <div style={{ fontWeight: 900, fontSize: '2rem', color: (isCovered && !isLimitExceeded) ? '#16a34a' : 'var(--color-primary)' }}>
+                          {(isCovered && !isLimitExceeded) ? 'Rs. 0 (Included)' : `Rs. ${activeService.basePrice} / kg`}
                         </div>
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', color: 'var(--color-text)', fontSize: '1.05rem', fontWeight: 600 }}>
-                        <CheckCircle size={20} color={isCovered ? '#16a34a' : 'var(--color-primary)'} />
+                        <CheckCircle size={20} color={(isCovered && !isLimitExceeded) ? '#16a34a' : 'var(--color-primary)'} />
                         <span>Final weight will be measured at pickup</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', color: 'var(--color-text)', fontSize: '1.05rem', fontWeight: 600 }}>
-                        <CheckCircle size={20} color={isCovered ? '#16a34a' : 'var(--color-primary)'} />
+                        <CheckCircle size={20} color={(isCovered && !isLimitExceeded) ? '#16a34a' : 'var(--color-primary)'} />
                         <span>Exact price will be updated after inspection</span>
                       </div>
                     </div>
+
+                    <button
+                      className="btn btn-primary"
+                      disabled={cart.some(item => item.service === activeService.name)}
+                      style={{ 
+                        width: '100%', marginTop: '2rem', padding: '1rem', 
+                        background: (isCovered && !isLimitExceeded) ? 'linear-gradient(90deg, #16a34a, #15803d)' : 'var(--color-primary)',
+                        opacity: cart.some(item => item.service === activeService.name) ? 0.6 : 1,
+                        cursor: cart.some(item => item.service === activeService.name) ? 'not-allowed' : 'pointer',
+                        border: 'none', boxShadow: (isCovered && !isLimitExceeded) ? '0 4px 15px rgba(22,163,74,0.3)' : '0 4px 15px rgba(91,62,132,0.2)'
+                      }}
+                      onClick={() => {
+                        const newItem = {
+                          id: Date.now(),
+                          product: activeService.name,
+                          service: activeService.name,
+                          quantity: 0, // Weight determined at pickup
+                          unit: 'kg',
+                          price: (isCovered && !isLimitExceeded) ? 0 : activeService.basePrice,
+                          total: 0,
+                          subscriptionApplied: isCovered && !isLimitExceeded,
+                        };
+                        setCart([...cart, newItem]);
+                      }}
+                    >
+                      {cart.some(item => item.service === activeService.name) ? 'Already in Bag' : 'Add Service to Bag'}
+                    </button>
                   </div>
                 );
               };
 
               const renderProductContent = () => {
-                const isCovered = isServiceCovered(activeService.name);
+                const sub = getServiceSubscription(activeService.name);
+                const isCovered = !!sub;
+                const remaining = sub ? Math.max(0, sub.totalLimit - sub.used) : 0;
+                const isLimitExceeded = sub && sub.used >= sub.totalLimit;
 
                 return (
                   <div className="fade-in">
                     {/* Subscription status banner */}
-                    {isCovered ? (
+                    {isCovered && !isLimitExceeded ? (
                       <div style={{
                         background: 'linear-gradient(90deg, #16a34a, #15803d)',
                         color: 'white', padding: '0.85rem 1.25rem', fontSize: '0.85rem', fontWeight: 900,
@@ -990,7 +1006,19 @@ function App() {
                         letterSpacing: '0.03em',
                       }}>
                         <Zap size={18} fill="white" />
-                        COVERED UNDER YOUR SUBSCRIPTION · TOTAL: ₹0
+                        COVERED UNDER YOUR SUBSCRIPTION · REMAINING: {remaining} KG · TOTAL: ₹0
+                      </div>
+                    ) : isLimitExceeded ? (
+                      <div style={{
+                        background: '#f59e0b',
+                        color: 'white', padding: '0.85rem 1.25rem', fontSize: '0.85rem', fontWeight: 900,
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        borderRadius: '14px', marginBottom: '1.5rem',
+                        boxShadow: '0 4px 16px rgba(245,158,11,0.25)',
+                        letterSpacing: '0.03em',
+                      }}>
+                        <AlertCircle size={18} fill="white" />
+                        SUBSCRIPTION LIMIT EXCEEDED · NORMAL PRICING APPLIES
                       </div>
                     ) : (
                       <div style={{
@@ -1014,6 +1042,7 @@ function App() {
                           {activeServiceProducts.map(prod => {
                             const qty = selectionQuantities[prod._id] || 0;
                             const isProductSelected = qty > 0;
+                            const isEffectivelyCovered = isCovered && !isLimitExceeded;
                             return (
                               <div
                                 key={prod._id}
@@ -1025,19 +1054,19 @@ function App() {
                                 className="product-card"
                                 style={{
                                   background: isProductSelected
-                                    ? isCovered ? 'rgba(22,163,74,0.08)' : 'rgba(91,62,132,0.1)'
+                                    ? isEffectivelyCovered ? 'rgba(22,163,74,0.08)' : 'rgba(91,62,132,0.1)'
                                     : 'rgba(255,255,255,0.03)',
                                   border: `1.5px solid ${isProductSelected
-                                    ? isCovered ? 'rgba(22,163,74,0.5)' : 'var(--color-primary)'
+                                    ? isEffectivelyCovered ? 'rgba(22,163,74,0.5)' : 'var(--color-primary)'
                                     : 'rgba(91,62,132,0.1)'}`,
                                   borderRadius: '16px', padding: '1.25rem', cursor: 'pointer',
                                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                   textAlign: 'center', position: 'relative',
                                 }}
                               >
-                                <div style={{ fontWeight: 800, color: isCovered && isProductSelected ? '#16a34a' : 'var(--color-primary)', fontSize: '0.95rem', marginBottom: '0.4rem' }}>{prod.name}</div>
+                                <div style={{ fontWeight: 800, color: isEffectivelyCovered && isProductSelected ? '#16a34a' : 'var(--color-primary)', fontSize: '0.95rem', marginBottom: '0.4rem' }}>{prod.name}</div>
                                 {activeService?.type !== 'Global' && (
-                                  isCovered ? (
+                                  isEffectivelyCovered ? (
                                     <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#16a34a' }}>₹0 (Covered)</div>
                                   ) : (
                                     <>
@@ -1070,18 +1099,18 @@ function App() {
 
                         {Object.keys(selectionQuantities).length > 0 && (
                           <div style={{
-                            background: isCovered ? 'linear-gradient(90deg, #16a34a, #15803d)' : 'var(--color-primary)',
+                            background: (isCovered && !isLimitExceeded) ? 'linear-gradient(90deg, #16a34a, #15803d)' : 'var(--color-primary)',
                             borderRadius: '16px', padding: '1.25rem', marginBottom: '2rem',
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            color: '#fff', boxShadow: isCovered ? '0 8px 24px rgba(22,163,74,0.25)' : '0 8px 24px rgba(91,62,132,0.2)',
+                            color: '#fff', boxShadow: (isCovered && !isLimitExceeded) ? '0 8px 24px rgba(22,163,74,0.25)' : '0 8px 24px rgba(91,62,132,0.2)',
                           }}>
                             <div>
                               <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{Object.keys(selectionQuantities).length} Items Selected</div>
-                              <div style={{ fontSize: '0.85rem', opacity: 0.85 }}>{activeService.name} · {isCovered ? 'Covered under subscription' : "Click '+' to add to bag"}</div>
+                              <div style={{ fontSize: '0.85rem', opacity: 0.85 }}>{activeService.name} · {(isCovered && !isLimitExceeded) ? 'Covered under subscription' : isLimitExceeded ? 'Limit exceeded · Normal pricing applies' : "Click '+' to add to bag"}</div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                               <div style={{ fontWeight: 900, fontSize: '1.5rem' }}>
-                                {isCovered ? '₹0 (Covered)' : (() => {
+                                {(isCovered && !isLimitExceeded) ? '₹0 (Covered)' : (() => {
                                   const total = Object.entries(selectionQuantities).reduce((acc, [id, qty]) => {
                                     const p = activeServiceProducts.find(prod => prod._id === id);
                                     return acc + (p?.servicePrice || 0) * qty;
@@ -1091,7 +1120,7 @@ function App() {
                               </div>
                               <button
                                 className="btn btn-secondary"
-                                style={{ padding: '0.6rem 1.5rem', background: '#fff', color: isCovered ? '#16a34a' : 'var(--color-primary)', fontWeight: 800 }}
+                                style={{ padding: '0.6rem 1.5rem', background: '#fff', color: (isCovered && !isLimitExceeded) ? '#16a34a' : 'var(--color-primary)', fontWeight: 800 }}
                                 onClick={() => {
                                   const newItems = Object.entries(selectionQuantities).map(([id, qty]) => {
                                     const prod = activeServiceProducts.find(p => p._id === id);
@@ -1101,9 +1130,9 @@ function App() {
                                       service: activeService.name,
                                       quantity: qty,
                                       unit: 'pcs',
-                                      price: isCovered ? 0 : prod.servicePrice,
-                                      total: isCovered ? 0 : prod.servicePrice * qty,
-                                      subscriptionApplied: isCovered,
+                                      price: (isCovered && !isLimitExceeded) ? 0 : prod.servicePrice,
+                                      total: (isCovered && !isLimitExceeded) ? 0 : prod.servicePrice * qty,
+                                      subscriptionApplied: isCovered && !isLimitExceeded,
                                     };
                                   });
                                   setCart([...cart, ...newItems]);
@@ -1137,15 +1166,15 @@ function App() {
                           </tr>
                         </thead>
                         <tbody>
-                          {cart.map(item => {
-                            const isSubscribed = isServiceCovered(item.service);
+                           {cart.map(item => {
                             const svc = services.find(s => s.name === item.service);
+                            const isSubUsed = item.subscriptionApplied;
                             return (
                               <tr key={item.id} style={{ borderTop: '1px solid rgba(91,62,132,0.05)' }}>
                                 <td style={{ padding: '1rem' }}>
                                   <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                     {item.product}
-                                    {isSubscribed && (
+                                    {isSubUsed && (
                                       <span style={{
                                         fontSize: '0.65rem', fontWeight: 900, background: 'rgba(22,163,74,0.12)',
                                         color: '#16a34a', padding: '0.1rem 0.45rem', borderRadius: '100px',
@@ -1156,12 +1185,12 @@ function App() {
                                   <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{item.service}</div>
                                 </td>
                                 <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 700 }}>{item.quantity || '—'}</td>
-                                <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 800, color: isSubscribed ? '#16a34a' : 'inherit' }}>
+                                <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 800, color: isSubUsed ? '#16a34a' : 'inherit' }}>
                                   {(() => {
                                     if (item.unit === 'kg' || svc?.type === 'Global') {
-                                      return isSubscribed ? '₹0/kg ✓' : `Rs. ${svc?.basePrice || item.price}/kg`;
+                                      return isSubUsed ? '₹0/kg ✓' : `Rs. ${svc?.basePrice || item.price}/kg`;
                                     }
-                                    return isSubscribed ? '₹0 ✓' : `Rs. ${item.total}`;
+                                    return isSubUsed ? '₹0 ✓' : `Rs. ${item.total}`;
                                   })()}
                                 </td>
                                 <td style={{ padding: '1rem', textAlign: 'center' }}>

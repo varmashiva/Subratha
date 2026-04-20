@@ -461,7 +461,7 @@ function SubscriptionsTab() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ userId: '', plan: 'Wash & Fold', startDate: '', endDate: '', limitKg: 25, usedKg: 0 });
+  const [form, setForm] = useState({ userId: '', plan: 'Wash & Fold', startDate: '', endDate: '', totalLimit: 25, used: 0 });
 
   const fetchData = async () => {
     try {
@@ -513,7 +513,7 @@ function SubscriptionsTab() {
       {actionLoading && <ActionOverlay />}
       <div className="adm-toolbar">
          <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => {
-           setForm({ userId: '', plan: 'Wash & Fold', startDate: '', endDate: '', limitKg: 25, usedKg: 0 });
+           setForm({ userId: '', plan: 'Wash & Fold', startDate: '', endDate: '', totalLimit: 25, used: 0 });
            setShowModal(true);
          }}>
            <Plus size={16} /> Assign Subscription
@@ -530,41 +530,38 @@ function SubscriptionsTab() {
             </tr>
           </thead>
           <tbody>
-            {(subs || []).map(s => {
-              const progress = Math.min(100, (s.usedKg / s.limitKg) * 100);
-              return (
-                <tr key={s._id}>
-                  <td style={{ fontWeight: 600 }}>
-                    {s.userId?.name || 'Unknown'} <br/>
-                    <small style={{ opacity: 0.5, fontWeight: 400 }}>{s.userId?.email}</small>
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 700, color: '#5b3e84' }}>{s.plan}</div>
-                    <small style={{ opacity: 0.5 }}>{s.serviceType}</small>
-                  </td>
-                  <td style={{ fontWeight: 700 }}>{s.usedKg} / {s.limitKg}</td>
-                  <td style={{ width: '150px' }}>
-                    <div style={{ width: '100%', background: 'rgba(0,0,0,0.05)', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ width: `${progress}%`, height: '100%', background: progress > 100 ? '#f39c12' : '#5b3e84', transition: 'width 0.3s' }}></div>
-                    </div>
-                  </td>
-                  <td>{new Date(s.endDate).toLocaleDateString()}</td>
-                  <td>
-                    <span style={{
-                      padding: '0.2rem 0.6rem', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 800,
-                      background: s.status === 'Active' ? 'rgba(39,174,96,0.1)' : 'rgba(231,76,60,0.1)',
-                      color: s.status === 'Active' ? '#27ae60' : '#e74c3c'
-                    }}>{s.status.toUpperCase()}</span>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button className="adm-icon-btn" title="Reset Usage" onClick={() => resetUsage(s._id)}><RefreshCw size={14} /></button>
-                      <button className="adm-icon-btn text-danger" onClick={() => deleteSub(s._id)}><Trash2 size={14} /></button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+            {(subs || []).map(s => (
+              <tr key={s._id}>
+                <td style={{ fontWeight: 600 }}>
+                  {s.userId?.name || 'Unknown'} <br/>
+                  <small style={{ opacity: 0.5, fontWeight: 400 }}>{s.userId?.email}</small>
+                </td>
+                <td>
+                  <div style={{ fontWeight: 700, color: '#5b3e84' }}>{s.plan}</div>
+                  <small style={{ opacity: 0.5 }}>{s.service}</small>
+                </td>
+                <td style={{ fontWeight: 700 }}>{s.used} / {s.totalLimit}</td>
+                <td style={{ width: '150px' }}>
+                  <div style={{ width: '100%', background: 'rgba(0,0,0,0.05)', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.min(100, (s.used / s.totalLimit) * 100)}%`, height: '100%', background: (s.used / s.totalLimit) * 100 > 100 ? '#f39c12' : '#5b3e84', transition: 'width 0.3s' }}></div>
+                  </div>
+                </td>
+                <td>{new Date(s.endDate).toLocaleDateString()}</td>
+                <td>
+                  <span style={{
+                    padding: '0.2rem 0.6rem', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 800,
+                    background: s.status === 'Active' ? 'rgba(39,174,96,0.1)' : 'rgba(231,76,60,0.1)',
+                    color: s.status === 'Active' ? '#27ae60' : '#e74c3c'
+                  }}>{s.status.toUpperCase()}</span>
+                </td>
+                <td>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button className="adm-icon-btn" title="Reset Usage" onClick={() => resetUsage(s._id)}><RefreshCw size={14} /></button>
+                    <button className="adm-icon-btn text-danger" onClick={() => deleteSub(s._id)}><Trash2 size={14} /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -597,7 +594,7 @@ function SubscriptionsTab() {
           </div>
           <div className="input-group">
             <label className="form-label">Monthly Limit (KG)</label>
-            <input type="number" className="input-field" value={form.limitKg} onChange={e => setForm({ ...form, limitKg: e.target.value })} />
+            <input type="number" className="input-field" value={form.totalLimit} onChange={e => setForm({ ...form, totalLimit: e.target.value })} />
           </div>
           <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} onClick={saveSub}>Create Subscription</button>
         </div>

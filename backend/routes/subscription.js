@@ -33,7 +33,7 @@ const adminOnly = async (req, res, next) => {
   }
 };
 
-// ─── USER: Get my active subscription ─────────────────────────────────────────
+// ─── USER: Get my active subscriptions ────────────────────────────────────────
 router.get('/my', protect, async (req, res) => {
   try {
     // Auto-expire stale subscriptions
@@ -42,10 +42,10 @@ router.get('/my', protect, async (req, res) => {
       { status: 'Expired' }
     );
 
-    const sub = await Subscription.findOne({ userId: req.user.id, status: 'Active' });
-    res.json({ subscription: sub || null });
+    const subs = await Subscription.find({ userId: req.user.id, status: 'Active' });
+    res.json({ subscriptions: subs || [] });
   } catch (err) {
-    res.status(500).json({ message: 'Error fetching subscription' });
+    res.status(500).json({ message: 'Error fetching subscriptions' });
   }
 });
 
@@ -123,10 +123,10 @@ router.post('/', async (req, res) => {
     }
 
     const SERVICE_MAP = {
-      'Wash & Fold': 'Wash&Fold',
-      'Wash & Iron': 'Wash&Iron',
-      'Wash and dry': 'Wash&Fold',
-      'Wash and iron': 'Wash&Iron'
+      'Wash & Fold': 'Wash and dry',
+      'Wash & Iron': 'Wash and iron',
+      'Wash and dry': 'Wash and dry',
+      'Wash and iron': 'Wash and iron'
     };
     const PRICE_MAP = {
       'Wash & Fold': 1999,
@@ -145,16 +145,14 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD' });
     }
 
-    // Deactivate any existing active sub for this user
-    await Subscription.updateMany({ userId, status: 'Active' }, { status: 'Expired' });
-
+    // Create the new subscription without deactivating others
     const sub = await Subscription.create({
       userId,
       plan,
-      serviceType: SERVICE_MAP[plan],
+      service: SERVICE_MAP[plan],
       price: PRICE_MAP[plan],
-      limitKg: Number(limitKg) || 25,
-      usedKg: Number(usedKg) || 0,
+      totalLimit: Number(limitKg) || 25,
+      used: Number(usedKg) || 0,
       startDate: sDate,
       endDate: eDate,
       status: status || 'Active'
@@ -186,7 +184,7 @@ router.patch('/:id', protect, adminOnly, async (req, res) => {
 // ─── ADMIN: Reset usage ───────────────────────────────────────────────────────
 router.patch('/:id/reset', protect, adminOnly, async (req, res) => {
   try {
-    const sub = await Subscription.findByIdAndUpdate(req.params.id, { usedKg: 0 }, { new: true });
+    const sub = await Subscription.findByIdAndUpdate(req.params.id, { used: 0 }, { new: true });
     res.json(sub);
   } catch (err) {
     res.status(500).json({ message: 'Error resetting subscription usage' });

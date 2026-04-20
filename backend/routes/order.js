@@ -33,13 +33,17 @@ router.post('/', protect, async (req, res) => {
     // Check if any item is KG-based and missing weight
     const isPendingWeight = items.some(item => item.unit === 'kg' && (item.quantity === null || item.quantity === 0));
 
-    // If subscription was applied on the frontend, deduct kg ONLY if weight is known
-    // If weight is pending, we'll deduct it when the weight is updated by admin
-    if (subscriptionApplied && subscriptionKgDeducted > 0 && !isPendingWeight) {
-      await Subscription.findOneAndUpdate(
-        { userId: req.user.id, status: 'Active' },
-        { $inc: { usedKg: subscriptionKgDeducted } }
-      );
+    // If subscription was applied on the frontend, deduct from the correct subscriptions
+    if (subscriptionApplied && !isPendingWeight) {
+      const subAppliedItems = items.filter(item => item.subscriptionApplied && item.quantity > 0);
+      
+      for (const item of subAppliedItems) {
+        // Find the specific subscription for this service
+        await Subscription.findOneAndUpdate(
+          { userId: req.user.id, status: 'Active', service: item.service },
+          { $inc: { used: item.quantity } }
+        );
+      }
     }
 
     const order = await Order.create({
@@ -134,11 +138,15 @@ router.patch('/:id', protect, async (req, res) => {
       updateFields.totalAmount = newTotalAmount;
 
       // Handle subscription deduction if it was pending and we now have weights
-      if (originalOrder.status === 'pending_weight' && originalOrder.subscriptionApplied && newSubscriptionKgDeducted > 0) {
-        await Subscription.findOneAndUpdate(
-          { userId: originalOrder.user, status: 'Active' },
-          { $inc: { usedKg: newSubscriptionKgDeducted } }
-        );
+      if (originalOrder.status === 'pending_weight' && originalOrder.subscriptionApplied) {
+        const subAppliedItems = updatedItems.filter(item => item.subscriptionApplied && item.quantity > 0);
+        
+        for (const item of subAppliedItems) {
+          await Subscription.findOneAndUpdate(
+            { userId: originalOrder.user, status: 'Active', service: item.service },
+            { $inc: { used: item.quantity } }
+          );
+        }
         updateFields.subscriptionKgDeducted = newSubscriptionKgDeducted;
       }
     }

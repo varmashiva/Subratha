@@ -8,24 +8,21 @@ const subscriptionSchema = new mongoose.Schema({
   },
   plan: {
     type: String,
-    enum: ['Wash & Fold', 'Wash & Iron'],
     required: true
   },
-  serviceType: {
+  service: {
     type: String,
     required: true
-    // 'Wash & Fold' maps to 'Wash and dry'
-    // 'Wash & Iron' maps to 'Wash and iron'
   },
   price: {
     type: Number,
     required: true
   },
-  limitKg: {
+  totalLimit: {
     type: Number,
     default: 25
   },
-  usedKg: {
+  used: {
     type: Number,
     default: 0
   },
