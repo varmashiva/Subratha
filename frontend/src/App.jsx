@@ -737,6 +737,7 @@ function App() {
                             className="btn btn-primary"
                             style={{ width: '100%', marginTop: 'auto', padding: '1rem' }}
                             onClick={() => {
+                              const normalize = (s) => s?.toLowerCase().replace(/[^a-z]/g, '').replace('and', '').replace('ironing', 'iron');
                               const s = services.find(gs => normalize(gs.name) === normalize(plan.service));
                               setSelectedPlan({ 
                                 name: plan.name, 
