@@ -322,7 +322,7 @@ function App() {
       syncDraftOrder();
     }, 1000);
     return () => clearTimeout(timeout);
-  }, [cart, orderStep, orderDetails, selectedServices, selectionQuantities]);
+  }, [cart, orderStep, orderDetails, selectedServices, selectionQuantities, selectedPlan]);
 
   React.useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -889,7 +889,7 @@ function App() {
                 if (sub) return sub;
 
                 // Check selectedPlan (legacy/temporary)
-                if (selectedPlan && normalize(selectedPlan.service) === target) {
+                if (selectedPlan && (normalize(selectedPlan.service) === target || normalize(selectedPlan.name) === target)) {
                   return { ...selectedPlan, isTemporary: true };
                 }
                 
