@@ -891,17 +891,17 @@ function App() {
                           onClick={() => handleChipClick(svc)}
                           style={{
                             padding: '0.6rem 1.25rem', borderRadius: '100px', border: '1px solid',
-                            borderColor: isActive ? 'var(--color-primary)' : isCovered ? '#16a34a' : isSelected ? 'rgba(91,62,132,0.4)' : 'rgba(91,62,132,0.15)',
-                            background: isActive ? 'var(--color-primary)' : isSelected ? 'rgba(91,62,132,0.1)' : 'rgba(255,255,255,0.05)',
-                            color: isActive ? '#fff' : isCovered ? '#16a34a' : 'var(--color-primary)',
+                            borderColor: isActive ? 'var(--color-primary)' : isCovered ? 'rgba(91,62,132,0.4)' : isSelected ? 'rgba(91,62,132,0.4)' : 'rgba(91,62,132,0.15)',
+                            background: isActive ? 'var(--color-primary)' : isCovered ? 'rgba(91,62,132,0.08)' : isSelected ? 'rgba(91,62,132,0.1)' : 'rgba(255,255,255,0.05)',
+                            color: isActive ? '#fff' : 'var(--color-primary)',
                             cursor: 'pointer',
                             fontWeight: 700, fontSize: '0.9rem', transition: 'all 0.2s',
-                            boxShadow: isCovered ? '0 0 10px rgba(22,163,74,0.15)' : isActive ? '0 4px 12px rgba(91,62,132,0.2)' : 'none',
+                            boxShadow: isCovered ? '0 4px 12px rgba(91,62,132,0.08)' : isActive ? '0 4px 12px rgba(91,62,132,0.2)' : 'none',
                             position: 'relative',
                             display: 'flex', alignItems: 'center', gap: '0.4rem',
                           }}
                         >
-                          {isCovered && <Zap size={14} fill={isActive ? '#fff' : '#16a34a'} />}
+                          {isCovered && <Zap size={14} fill={isActive ? '#fff' : 'var(--color-primary)'} color="var(--color-primary)" />}
                           {svc.name}
                         </button>
                       );
@@ -918,23 +918,24 @@ function App() {
 
                 return (
                   <div className="fade-in" style={{ 
-                    background: (isCovered && !isLimitExceeded) ? 'linear-gradient(135deg, rgba(22,163,74,0.08) 0%, rgba(22,163,74,0.03) 100%)' : 'linear-gradient(135deg, rgba(91,62,132,0.08) 0%, rgba(91,62,132,0.03) 100%)', 
+                    background: (isCovered && !isLimitExceeded) ? 'linear-gradient(135deg, rgba(91,62,132,0.1) 0%, rgba(91,62,132,0.05) 100%)' : 'linear-gradient(135deg, rgba(91,62,132,0.08) 0%, rgba(91,62,132,0.03) 100%)', 
                     borderRadius: '20px', 
                     padding: '2.5rem', 
-                    border: `1px solid ${(isCovered && !isLimitExceeded) ? 'rgba(22,163,74,0.4)' : 'rgba(91,62,132,0.1)'}`,
+                    border: `1px solid ${(isCovered && !isLimitExceeded) ? 'rgba(91,62,132,0.3)' : 'rgba(91,62,132,0.1)'}`,
                     position: 'relative',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    boxShadow: (isCovered && !isLimitExceeded) ? '0 15px 35px -10px rgba(91,62,132,0.15)' : 'none'
                   }}>
                     {isCovered && !isLimitExceeded ? (
-                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: 'linear-gradient(90deg, #16a34a, #15803d)', color: 'white', padding: '0.5rem 1rem', fontSize: '0.75rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.5rem', letterSpacing: '0.05em' }}>
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: 'linear-gradient(90deg, #5b3e84, #7c5cb5)', color: 'white', padding: '0.6rem 1.25rem', fontSize: '0.75rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.6rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                         <Zap size={14} fill="white" /> COVERED UNDER YOUR SUBSCRIPTION · REMAINING: {remaining} KG · TOTAL: ₹0
                       </div>
                     ) : isLimitExceeded ? (
-                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: '#f59e0b', color: 'white', padding: '0.5rem 1rem', fontSize: '0.75rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.5rem', letterSpacing: '0.05em' }}>
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: '#d97706', color: 'white', padding: '0.6rem 1.25rem', fontSize: '0.75rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.6rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                         <AlertCircle size={14} /> SUBSCRIPTION LIMIT EXCEEDED · NORMAL PRICING APPLIES
                       </div>
                     ) : (
-                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: 'rgba(91,62,132,0.08)', color: 'var(--color-text)', opacity: 0.7, padding: '0.5rem 1rem', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: 'rgba(91,62,132,0.08)', color: 'var(--color-primary)', opacity: 0.8, padding: '0.6rem 1.25rem', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.6rem', textTransform: 'uppercase' }}>
                         <AlertCircle size={14} /> NOT INCLUDED IN YOUR SUBSCRIPTION · NORMAL PRICING APPLIES
                       </div>
                     )}
@@ -946,7 +947,7 @@ function App() {
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: '0.85rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 800, marginBottom: '0.5rem' }}>Estimation Rate</div>
-                        <div style={{ fontWeight: 900, fontSize: '2rem', color: (isCovered && !isLimitExceeded) ? '#16a34a' : 'var(--color-primary)' }}>
+                        <div style={{ fontWeight: 900, fontSize: '2rem', color: 'var(--color-primary)' }}>
                           {(isCovered && !isLimitExceeded) ? 'Rs. 0 (Included)' : `Rs. ${activeService.basePrice} / kg`}
                         </div>
                       </div>
@@ -954,11 +955,11 @@ function App() {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', color: 'var(--color-text)', fontSize: '1.05rem', fontWeight: 600 }}>
-                        <CheckCircle size={20} color={(isCovered && !isLimitExceeded) ? '#16a34a' : 'var(--color-primary)'} />
+                        <CheckCircle size={20} color="var(--color-primary)" />
                         <span>Final weight will be measured at pickup</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', color: 'var(--color-text)', fontSize: '1.05rem', fontWeight: 600 }}>
-                        <CheckCircle size={20} color={(isCovered && !isLimitExceeded) ? '#16a34a' : 'var(--color-primary)'} />
+                        <CheckCircle size={20} color={(isCovered && !isLimitExceeded) ? 'var(--color-primary)' : 'var(--color-primary)'} />
                         <span>Exact price will be updated after inspection</span>
                       </div>
                     </div>
@@ -968,10 +969,10 @@ function App() {
                       disabled={cart.some(item => item.service === activeService.name)}
                       style={{ 
                         width: '100%', marginTop: '2rem', padding: '1rem', 
-                        background: (isCovered && !isLimitExceeded) ? 'linear-gradient(90deg, #16a34a, #15803d)' : 'var(--color-primary)',
+                        background: (isCovered && !isLimitExceeded) ? 'linear-gradient(90deg, #5b3e84, #7c5cb5)' : 'var(--color-primary)',
                         opacity: cart.some(item => item.service === activeService.name) ? 0.6 : 1,
                         cursor: cart.some(item => item.service === activeService.name) ? 'not-allowed' : 'pointer',
-                        border: 'none', boxShadow: (isCovered && !isLimitExceeded) ? '0 4px 15px rgba(22,163,74,0.3)' : '0 4px 15px rgba(91,62,132,0.2)'
+                        border: 'none', boxShadow: (isCovered && !isLimitExceeded) ? '0 10px 25px -5px rgba(91,62,132,0.3)' : '0 10px 25px -5px rgba(91,62,132,0.2)'
                       }}
                       onClick={() => {
                         const newItem = {
@@ -1004,24 +1005,24 @@ function App() {
                     {/* Subscription status banner */}
                     {isCovered && !isLimitExceeded ? (
                       <div style={{
-                        background: 'linear-gradient(90deg, #16a34a, #15803d)',
+                        background: 'linear-gradient(90deg, #5b3e84, #7c5cb5)',
                         color: 'white', padding: '0.85rem 1.25rem', fontSize: '0.85rem', fontWeight: 900,
                         display: 'flex', alignItems: 'center', gap: '0.75rem',
                         borderRadius: '14px', marginBottom: '1.5rem',
-                        boxShadow: '0 4px 16px rgba(22,163,74,0.25)',
-                        letterSpacing: '0.03em',
+                        boxShadow: '0 8px 20px rgba(91,62,132,0.2)',
+                        letterSpacing: '0.04em', textTransform: 'uppercase'
                       }}>
                         <Zap size={18} fill="white" />
                         COVERED UNDER YOUR SUBSCRIPTION · REMAINING: {remaining} KG · TOTAL: ₹0
                       </div>
                     ) : isLimitExceeded ? (
                       <div style={{
-                        background: '#f59e0b',
+                        background: '#d97706',
                         color: 'white', padding: '0.85rem 1.25rem', fontSize: '0.85rem', fontWeight: 900,
                         display: 'flex', alignItems: 'center', gap: '0.75rem',
                         borderRadius: '14px', marginBottom: '1.5rem',
-                        boxShadow: '0 4px 16px rgba(245,158,11,0.25)',
-                        letterSpacing: '0.03em',
+                        boxShadow: '0 8px 20px rgba(217,119,6,0.2)',
+                        letterSpacing: '0.04em', textTransform: 'uppercase'
                       }}>
                         <AlertCircle size={18} fill="white" />
                         SUBSCRIPTION LIMIT EXCEEDED · NORMAL PRICING APPLIES
@@ -1059,21 +1060,19 @@ function App() {
                                 }}
                                 className="product-card"
                                 style={{
-                                  background: isProductSelected
-                                    ? isEffectivelyCovered ? 'rgba(22,163,74,0.08)' : 'rgba(91,62,132,0.1)'
-                                    : 'rgba(255,255,255,0.03)',
                                   border: `1.5px solid ${isProductSelected
-                                    ? isEffectivelyCovered ? 'rgba(22,163,74,0.5)' : 'var(--color-primary)'
+                                    ? 'var(--color-primary)'
                                     : 'rgba(91,62,132,0.1)'}`,
                                   borderRadius: '16px', padding: '1.25rem', cursor: 'pointer',
                                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                   textAlign: 'center', position: 'relative',
+                                  boxShadow: isProductSelected ? '0 8px 20px rgba(91,62,132,0.1)' : 'none',
                                 }}
                               >
-                                <div style={{ fontWeight: 800, color: isEffectivelyCovered && isProductSelected ? '#16a34a' : 'var(--color-primary)', fontSize: '0.95rem', marginBottom: '0.4rem' }}>{prod.name}</div>
+                                <div style={{ fontWeight: 800, color: 'var(--color-primary)', fontSize: '0.95rem', marginBottom: '0.4rem' }}>{prod.name}</div>
                                 {activeService?.type !== 'Global' && (
                                   isEffectivelyCovered ? (
-                                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#16a34a' }}>₹0 (Covered)</div>
+                                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--color-primary)' }}>₹0 (Covered)</div>
                                   ) : (
                                     <>
                                       <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--color-text)' }}>Rs. {prod.servicePrice}</div>
@@ -1093,9 +1092,9 @@ function App() {
                                       } else {
                                         setSelectionQuantities({ ...selectionQuantities, [prod._id]: newQty });
                                       }
-                                    }} style={{ width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: isCovered ? '#16a34a' : 'var(--color-primary)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                                    }} style={{ width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: 'var(--color-primary)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
                                     <span style={{ fontWeight: 900, minWidth: '24px', fontSize: '1.1rem' }}>{qty}</span>
-                                    <button onClick={() => setSelectionQuantities({ ...selectionQuantities, [prod._id]: qty + 1 })} style={{ width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: isCovered ? '#16a34a' : 'var(--color-primary)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                                    <button onClick={() => setSelectionQuantities({ ...selectionQuantities, [prod._id]: qty + 1 })} style={{ width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: 'var(--color-primary)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                                   </div>
                                 )}
                               </div>
@@ -1182,16 +1181,17 @@ function App() {
                                     {item.product}
                                     {isSubUsed && (
                                       <span style={{
-                                        fontSize: '0.65rem', fontWeight: 900, background: 'rgba(22,163,74,0.12)',
-                                        color: '#16a34a', padding: '0.1rem 0.45rem', borderRadius: '100px',
-                                        border: '1px solid rgba(22,163,74,0.3)', letterSpacing: '0.03em',
+                                        fontSize: '0.65rem', fontWeight: 900, background: 'rgba(91,62,132,0.12)',
+                                        color: 'var(--color-primary)', padding: '0.15rem 0.6rem', borderRadius: '100px',
+                                        border: '1px solid rgba(91,62,132,0.2)', letterSpacing: '0.04em',
+                                        textTransform: 'uppercase'
                                       }}>⚡ Covered</span>
                                     )}
                                   </div>
                                   <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{item.service}</div>
                                 </td>
                                 <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 700 }}>{item.quantity || '—'}</td>
-                                <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 800, color: isSubUsed ? '#16a34a' : 'inherit' }}>
+                                <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 800, color: isSubUsed ? 'var(--color-primary)' : 'inherit' }}>
                                   {(() => {
                                     if (item.unit === 'kg' || svc?.type === 'Global') {
                                       return isSubUsed ? '₹0/kg ✓' : `Rs. ${svc?.basePrice || item.price}/kg`;
