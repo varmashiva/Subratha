@@ -1222,62 +1222,6 @@ function App() {
                   <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-primary)', fontWeight: 800 }}>Add Laundry Items</h3>
                   <p style={{ color: '#b6a3ce', fontSize: '0.9rem', marginBottom: '1.5rem', fontWeight: 500 }}>Select one or more services. Subscription-covered services are highlighted in green.</p>
 
-                  {/* Active subscription/plan banner */}
-                  {(subscriptions.length > 0 || selectedPlan) && (
-                    <div className="fade-in" style={{
-                      marginBottom: '2rem',
-                      background: 'linear-gradient(135deg, rgba(22,163,74,0.12) 0%, rgba(22,163,74,0.06) 100%)',
-                      backdropFilter: 'blur(12px)',
-                      WebkitBackdropFilter: 'blur(12px)',
-                      border: '1px solid rgba(22,163,74,0.3)',
-                      borderRadius: '20px',
-                      padding: '1.25rem 1.75rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '1.25rem',
-                      boxShadow: '0 10px 30px -5px rgba(22, 163, 74, 0.15)',
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{
-                        width: '44px',
-                        height: '44px',
-                        borderRadius: '14px',
-                        background: 'rgba(22,163,74,0.15)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        boxShadow: 'inset 0 0 10px rgba(22,163,74,0.2)'
-                      }}>
-                        <Zap size={22} fill="#16a34a" color="#16a34a" />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
-                          <span style={{
-                            background: '#16a34a',
-                            color: '#fff',
-                            fontSize: '0.65rem',
-                            fontWeight: 900,
-                            padding: '0.2rem 0.6rem',
-                            borderRadius: '100px',
-                            letterSpacing: '0.06em',
-                            textTransform: 'uppercase'
-                          }}>
-                             {subscriptions.length > 0 ? 'Active Member' : 'Plan Selected'}
-                          </span>
-                          <span style={{ color: '#16a34a', fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.01em' }}>
-                            {subscriptions.length > 0 ? (subscriptions[0].service || subscriptions[0].plan) : selectedPlan.name}
-                          </span>
-                        </div>
-                        <div style={{ color: '#16a34a', fontSize: '0.85rem', fontWeight: 500, opacity: 0.9 }}>
-                          {isActiveServiceCovered 
-                            ? 'COVERED UNDER YOUR SUBSCRIPTION · TOTAL: ₹0' 
-                            : 'NOT INCLUDED IN YOUR SUBSCRIPTION · NORMAL PRICING APPLIES'}
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
                   {renderServiceChips()}
 
