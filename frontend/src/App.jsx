@@ -877,7 +877,14 @@ function App() {
                 .map(p => ({ ...p, servicePrice: p.services.find(s => s.name === activeService?.name).price }));
 
               const isServiceCovered = (serviceName) => {
-                return (selectedPlan && serviceName === selectedPlan.service) || (activeSub && serviceName === activeSub.serviceType);
+                const normalize = (s) => s?.toLowerCase().replace(/[^a-z]/g, '').replace('and', '').replace('ironing', 'iron');
+                const target = normalize(serviceName);
+                const matchingSub = subscriptions.find(sub => 
+                  sub.status === 'Active' && 
+                  (normalize(sub.service) === target || normalize(sub.plan) === target) &&
+                  sub.used < sub.totalLimit
+                );
+                return (selectedPlan && serviceName === selectedPlan.service) || !!matchingSub;
               };
 
               const renderServiceChips = () => (
