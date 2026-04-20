@@ -24,14 +24,14 @@ export default function ProfilePage({ user, onBack, onLogout }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedOrder, setExpandedOrder] = useState(null);
-  const [activeSub, setActiveSub] = useState(null);
+  const [subscriptions, setSubscriptions] = useState([]);
   const [loadingSub, setLoadingSub] = useState(true);
 
   useEffect(() => {
     const fetchActiveSub = async () => {
       try {
         const { data } = await axios.get(`${API_URL}/subscriptions/my`, { withCredentials: true });
-        setActiveSub(data.subscription);
+        setSubscriptions(data.subscriptions || []);
       } catch (err) {
         console.error('Error fetching subscription:', err);
       } finally {
@@ -152,60 +152,70 @@ export default function ProfilePage({ user, onBack, onLogout }) {
           </div>
         </div>
 
-        {/* Subscription Section */}
-        {activeSub && (
-          <div style={{
-            background: '#fff',
-            borderRadius: '20px',
-            padding: '2rem',
-            marginBottom: '2rem',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
-            border: '2px solid rgba(91,62,132,0.1)',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <div>
-                <div style={{ color: '#9488a0', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active Subscription</div>
-                <h2 style={{ margin: '0.2rem 0 0', fontSize: '1.5rem', fontWeight: 800, color: '#5b3e84' }}>{activeSub.plan}</h2>
-              </div>
-              <div style={{
-                background: 'rgba(22,163,74,0.1)', color: '#16a34a', padding: '0.4rem 1rem', borderRadius: '100px', fontSize: '0.8rem', fontWeight: 700
+        {/* Subscriptions Section */}
+        {subscriptions.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '-0.5rem' }}>
+              <Zap size={20} color="#5b3e84" />
+              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#1a1a2e' }}>Your Subscriptions</h2>
+            </div>
+            
+            {subscriptions.map((sub, idx) => (
+              <div key={sub._id || idx} style={{
+                background: '#fff',
+                borderRadius: '20px',
+                padding: '2rem',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
+                border: '2px solid rgba(91,62,132,0.1)',
+                position: 'relative',
+                overflow: 'hidden'
               }}>
-                ACTIVE
-              </div>
-            </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                  <div>
+                    <div style={{ color: '#9488a0', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Plan Type</div>
+                    <h2 style={{ margin: '0.2rem 0 0', fontSize: '1.5rem', fontWeight: 800, color: '#5b3e84' }}>{sub.plan}</h2>
+                  </div>
+                  <div style={{
+                    background: 'rgba(22,163,74,0.1)', color: '#16a34a', padding: '0.4rem 1rem', borderRadius: '100px', fontSize: '0.8rem', fontWeight: 700
+                  }}>
+                    ACTIVE
+                  </div>
+                </div>
 
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                <span style={{ color: '#1a1a2e', fontWeight: 600 }}>Usage: {activeSub.usedKg}kg / {activeSub.limitKg}kg</span>
-                <span style={{ color: '#9488a0' }}>{Math.round((activeSub.usedKg / activeSub.limitKg) * 100)}%</span>
-              </div>
-              <div style={{ width: '100%', height: '10px', background: 'rgba(91,62,132,0.1)', borderRadius: '100px', overflow: 'hidden' }}>
-                <div style={{
-                  width: `${Math.min(100, (activeSub.usedKg / activeSub.limitKg) * 100)}%`,
-                  height: '100%',
-                  background: activeSub.usedKg > activeSub.limitKg ? '#d97706' : '#5b3e84',
-                  borderRadius: '100px',
-                  transition: 'width 0.5s ease-out'
-                }}></div>
-              </div>
-            </div>
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                    <span style={{ color: '#1a1a2e', fontWeight: 600 }}>Usage: {sub.used}kg / {sub.totalLimit}kg</span>
+                    <span style={{ color: '#9488a0' }}>{Math.round((sub.used / sub.totalLimit) * 100)}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '10px', background: 'rgba(91,62,132,0.1)', borderRadius: '100px', overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${Math.min(100, (sub.used / sub.totalLimit) * 100)}%`,
+                      height: '100%',
+                      background: sub.used > sub.totalLimit ? '#d97706' : '#5b3e84',
+                      borderRadius: '100px',
+                      transition: 'width 0.5s ease-out'
+                    }}></div>
+                  </div>
+                </div>
 
-            <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-              <div>
-                <div style={{ color: '#9488a0', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>Service</div>
-                <div style={{ fontSize: '0.9rem', color: '#1a1a2e', fontWeight: 600 }}>{activeSub.serviceType}</div>
-              </div>
-              <div>
-                <div style={{ color: '#9488a0', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>Valid Till</div>
-                <div style={{ fontSize: '0.9rem', color: '#1a1a2e', fontWeight: 600 }}>
-                  {new Date(activeSub.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ color: '#9488a0', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>Service Covered</div>
+                    <div style={{ fontSize: '0.9rem', color: '#1a1a2e', fontWeight: 600 }}>{sub.service}</div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#9488a0', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>Valid Till</div>
+                    <div style={{ fontSize: '0.9rem', color: '#1a1a2e', fontWeight: 600 }}>
+                      {new Date(sub.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#9488a0', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>Monthly Cost</div>
+                    <div style={{ fontSize: '0.9rem', color: '#1a1a2e', fontWeight: 600 }}>₹{sub.price}/mo</div>
+                  </div>
                 </div>
               </div>
-              <div>
-                <div style={{ color: '#9488a0', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>Plan Price</div>
-                <div style={{ fontSize: '0.9rem', color: '#1a1a2e', fontWeight: 600 }}>₹{activeSub.price}/mo</div>
-              </div>
-            </div>
+            ))}
           </div>
         )}
 
