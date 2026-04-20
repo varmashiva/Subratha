@@ -612,40 +612,45 @@ function App() {
           </div>
 
           {/* Why Subratha Section */}
-          <section className="container section subratha-section" style={{ paddingTop: 0, paddingBottom: 0 }}>
+          <section className="container section subratha-section" style={{ paddingTop: 0, paddingBottom: 0, textAlign: 'center' }}>
             <div className="scroll-reveal" style={{ transitionDelay: '0.1s' }}>
-              <h2 style={{ marginBottom: '0.5rem' }}>Why Subratha?</h2>
-              <p>The gold standard in modern laundry & garment care.</p>
+              <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, marginBottom: '1rem' }}>Why Subratha?</h2>
+              <p style={{ color: 'var(--color-text-dim)', fontSize: '1.2rem', maxWidth: '600px', margin: '0 auto 3rem' }}>
+                The gold standard in modern laundry & garment care.
+              </p>
             </div>
 
-            <div className="benefits-grid">
+            <div className="benefits-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2.5rem' }}>
               {[
                 { title: "Fast Delivery", desc: "24-hour turnaround for standard orders and same-day express options.", icon: <Zap size={28} /> },
                 { title: "Affordable Pricing", desc: "Transparent, competitive rates without compromising on premium quality.", icon: <Tag size={28} /> },
                 { title: "Professional Handling", desc: "Every garment is inspected by experts and treated with specialized care.", icon: <ShieldCheck size={28} /> },
                 { title: "Trusted by Hotels", desc: "Proven reliability serving elite hospitality chains and boutiques.", icon: <Award size={28} /> }
               ].map((benefit, index) => (
-                <div key={index} className="benefit-item scroll-reveal" style={{ transitionDelay: `${(index * 0.1) + 0.2}s` }}>
-                  <div className="benefit-icon-container">{benefit.icon}</div>
-                  <h3 className="benefit-title">{benefit.title}</h3>
-                  <p className="benefit-description">{benefit.desc}</p>
+                <div key={index} className="benefit-item scroll-reveal" style={{ 
+                  transitionDelay: `${(index * 0.1) + 0.2}s`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                  padding: '2rem',
+                  background: 'rgba(255,255,255,0.02)',
+                  borderRadius: '24px',
+                  border: '1px solid rgba(91,62,132,0.1)'
+                }}>
+                  <div className="benefit-icon-container" style={{ color: 'var(--color-primary)', background: 'rgba(91,62,132,0.1)', padding: '1rem', borderRadius: '16px', marginBottom: '1.25rem' }}>{benefit.icon}</div>
+                  <h3 className="benefit-title" style={{ fontWeight: 800, fontSize: '1.3rem', marginBottom: '0.75rem' }}>{benefit.title}</h3>
+                  <p className="benefit-description" style={{ color: 'var(--color-text-dim)', lineHeight: 1.6 }}>{benefit.desc}</p>
                 </div>
               ))}
             </div>
 
-            <div className="flex-center scroll-reveal" style={{ marginTop: 'var(--space-lg)', transitionDelay: '0.6s' }}>
-              <button className="btn btn-primary" onClick={() => handleAction(true)}>
+            <div className="flex-center scroll-reveal" style={{ marginTop: '3.5rem', transitionDelay: '0.6s' }}>
+              <button className="btn btn-primary" onClick={() => handleAction(true)} style={{ padding: '1rem 2.5rem', fontSize: '1.1rem', fontWeight: 700 }}>
                 Get Started
               </button>
             </div>
           </section>
-
-          {/* Section Divider */}
-          <div className="section-divider" style={{ padding: 'var(--space-lg) 0' }}>
-            <div className="container">
-              <hr style={{ border: 'none', borderTop: '1px solid rgba(91, 62, 132, 0.15)', margin: '0 auto', width: '85%' }} />
-            </div>
-          </div>
 
           {/* Subscription Plans Section */}
           {(() => {
@@ -678,74 +683,83 @@ function App() {
             if (availablePlans.length === 0) return null;
 
             return (
-              <section className="section" id="subscriptions" style={{ background: 'var(--color-bg)', paddingTop: 0, paddingBottom: 0 }}>
-                <div className="container" id="subscription-plans">
-                  <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-                    <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, marginBottom: '1rem' }}>Subscription Plans</h2>
-                    <p style={{ color: 'var(--color-text-dim)', fontSize: '1.2rem' }}>Premium care for your regular laundry needs</p>
-                  </div>
-
-                  <div className="services-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
-                    {availablePlans.map((plan, i) => (
-                      <div key={plan.name} className="service-card" style={{
-                        padding: '2.5rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '1.5rem',
-                        textAlign: 'center',
-                        background: i === 1 ? 'linear-gradient(135deg, rgba(91,62,132,0.1) 0%, rgba(91,62,132,0.05) 100%)' : 'rgba(255,255,255,0.03)',
-                        border: i === 1 ? '1px solid var(--color-primary)' : '1px solid #5b3e84',
-                      }}>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>{plan.name}</div>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.2rem' }}>
-                          <span style={{ fontSize: '2.5rem', fontWeight: 900 }}>Rs. {plan.price}</span>
-                          <span style={{ color: 'var(--color-text-dim)' }}>/month</span>
-                        </div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>Up to {plan.weight} included</div>
-                        <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
-                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.8rem', textAlign: 'left', width: '100%' }}>
-                          {plan.features.map((f, fi) => (
-                            <li key={fi} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.95rem' }}>
-                              <CheckCircle size={18} color="var(--color-primary)" /> {f}
-                            </li>
-                          ))}
-                          <li style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.95rem' }}>
-                            <CheckCircle size={18} color="var(--color-primary)" /> Applies to: {plan.service}
-                          </li>
-                        </ul>
-                        <button
-                          className="btn btn-primary"
-                          style={{ width: '100%', marginTop: 'auto', padding: '1rem' }}
-                          onClick={() => {
-                            const s = services.find(gs => gs.name === plan.service);
-                            setSelectedPlan({ name: plan.name, service: plan.service });
-                            if (s) {
-                              setSelectedServices([s]);
-                              setActiveServiceId(s._id);
-                              handleAction();
-                              setOrderStep(1);
-                            } else {
-                              handleAction();
-                            }
-                          }}
-                        >
-                          Choose Plan
-                        </button>
-                      </div>
-                    ))}
+              <>
+                {/* Section Divider */}
+                <div className="section-divider" style={{ padding: 'var(--space-lg) 0' }}>
+                  <div className="container">
+                    <hr style={{ border: 'none', borderTop: '1px solid rgba(91, 62, 132, 0.15)', margin: '0 auto', width: '85%' }} />
                   </div>
                 </div>
-              </section>
+
+                <section className="section" id="subscriptions" style={{ background: 'var(--color-bg)', paddingTop: 0, paddingBottom: 0 }}>
+                  <div className="container" id="subscription-plans">
+                    <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+                      <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, marginBottom: '1rem' }}>Subscription Plans</h2>
+                      <p style={{ color: 'var(--color-text-dim)', fontSize: '1.2rem' }}>Premium care for your regular laundry needs</p>
+                    </div>
+
+                    <div className="services-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+                      {availablePlans.map((plan, i) => (
+                        <div key={plan.name} className="service-card" style={{
+                          padding: '2.5rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '1.5rem',
+                          textAlign: 'center',
+                          background: i === 1 ? 'linear-gradient(135deg, rgba(91,62,132,0.1) 0%, rgba(91,62,132,0.05) 100%)' : 'rgba(255,255,255,0.03)',
+                          border: i === 1 ? '1px solid var(--color-primary)' : '1px solid #5b3e84',
+                        }}>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>{plan.name}</div>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.2rem' }}>
+                            <span style={{ fontSize: '2.5rem', fontWeight: 900 }}>Rs. {plan.price}</span>
+                            <span style={{ color: 'var(--color-text-dim)' }}>/month</span>
+                          </div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>Up to {plan.weight} included</div>
+                          <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.8rem', textAlign: 'left', width: '100%' }}>
+                            {plan.features.map((f, fi) => (
+                              <li key={fi} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.95rem' }}>
+                                <CheckCircle size={18} color="var(--color-primary)" /> {f}
+                              </li>
+                            ))}
+                            <li style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.95rem' }}>
+                              <CheckCircle size={18} color="var(--color-primary)" /> Applies to: {plan.service}
+                            </li>
+                          </ul>
+                          <button
+                            className="btn btn-primary"
+                            style={{ width: '100%', marginTop: 'auto', padding: '1rem' }}
+                            onClick={() => {
+                              const s = services.find(gs => gs.name === plan.service);
+                              setSelectedPlan({ name: plan.name, service: plan.service });
+                              if (s) {
+                                setSelectedServices([s]);
+                                setActiveServiceId(s._id);
+                                handleAction();
+                                setOrderStep(1);
+                              } else {
+                                handleAction();
+                              }
+                            }}
+                          >
+                            Choose Plan
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+
+                {/* Section Divider */}
+                <div className="section-divider" style={{ padding: 'var(--space-lg) 0' }}>
+                  <div className="container">
+                    <hr style={{ border: 'none', borderTop: '1px solid rgba(91, 62, 132, 0.15)', margin: '0 auto', width: '85%' }} />
+                  </div>
+                </div>
+              </>
             );
           })()}
-
-          {/* Section Divider */}
-          <div className="section-divider" style={{ padding: 'var(--space-lg) 0' }}>
-            <div className="container">
-              <hr style={{ border: 'none', borderTop: '1px solid rgba(91, 62, 132, 0.15)', margin: '0 auto', width: '85%' }} />
-            </div>
-          </div>
 
           {/* How It Works Section */}
           <section className="works-scroll-container" ref={worksRef} style={{ paddingTop: 0 }}>
@@ -871,7 +885,15 @@ function App() {
                 return null;
               };
 
-              const isServiceCovered = (serviceName) => !!getServiceSubscription(serviceName);
+              const isServiceCovered = (serviceName) => {
+                const sub = getServiceSubscription(serviceName);
+                if (!sub) return false;
+                // If it has limit fields, check them. If not (legacy/temp), assume covered.
+                if (sub.totalLimit !== undefined && sub.used !== undefined) {
+                  return sub.used < sub.totalLimit;
+                }
+                return true;
+              };
               const isActiveServiceCovered = activeService && isServiceCovered(activeService.name);
 
               const handleChipClick = (svc) => {
@@ -930,8 +952,10 @@ function App() {
               const renderKgContent = () => {
                 const sub = getServiceSubscription(activeService.name);
                 const isCovered = !!sub;
-                const remaining = sub ? Math.max(0, sub.totalLimit - sub.used) : 0;
-                const isLimitExceeded = sub && sub.used >= sub.totalLimit;
+                const totalLimit = sub?.totalLimit || 0;
+                const used = sub?.used || 0;
+                const remaining = Math.max(0, totalLimit - used);
+                const isLimitExceeded = isCovered && used >= totalLimit;
 
                 return (
                   <div className="fade-in" style={{ 
@@ -1014,8 +1038,10 @@ function App() {
               const renderProductContent = () => {
                 const sub = getServiceSubscription(activeService.name);
                 const isCovered = !!sub;
-                const remaining = sub ? Math.max(0, sub.totalLimit - sub.used) : 0;
-                const isLimitExceeded = sub && sub.used >= sub.totalLimit;
+                const totalLimit = sub?.totalLimit || 0;
+                const used = sub?.used || 0;
+                const remaining = Math.max(0, totalLimit - used);
+                const isLimitExceeded = isCovered && used >= totalLimit;
 
                 return (
                   <div className="fade-in">
@@ -1065,8 +1091,9 @@ function App() {
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
                           {activeServiceProducts.map(prod => {
                             const qty = selectionQuantities[prod._id] || 0;
-                            const isProductSelected = qty > 0;
-                            const isEffectivelyCovered = isCovered && !isLimitExceeded;
+                            const isProductSelected = !!selectionQuantities[prod._id];
+                            const sub = getServiceSubscription(activeService?.name);
+                            const isEffectivelyCovered = sub && !isLimitExceeded && (sub.used < sub.totalLimit);
                             return (
                               <div
                                 key={prod._id}
