@@ -666,9 +666,13 @@ function App() {
               }
             ];
 
-            // Only show plans that haven't been subscribed to yet
+            // Only show plans that haven't been subscribed to yet (and are not exhausted)
             const availablePlans = allPlans.filter(plan => 
-              !subscriptions.some(sub => sub.service === plan.service || sub.plan === plan.name)
+              !subscriptions.some(sub => 
+                (sub.service === plan.service || sub.plan === plan.name) && 
+                sub.status === 'Active' && 
+                sub.used < sub.totalLimit
+              )
             );
 
             if (availablePlans.length === 0) return null;
