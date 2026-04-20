@@ -34,7 +34,13 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleAction = (signupToggle = false) => {
+  const handleAction = (signupToggle = false, isFromPlan = false) => {
+    // If starting a fresh order not from a specific Plan button, clear the selectedPlan
+    if (!isFromPlan) {
+      setSelectedPlan(null);
+      localStorage.removeItem('selectedPlan');
+    }
+
     if (!isAuthenticated) {
       setIsSignup(signupToggle);
       setShowAuthModal(true);
@@ -736,10 +742,10 @@ function App() {
                               if (s) {
                                 setSelectedServices([s]);
                                 setActiveServiceId(s._id);
-                                handleAction();
+                                handleAction(false, true);
                                 setOrderStep(1);
                               } else {
-                                handleAction();
+                                handleAction(false, true);
                               }
                             }}
                           >
@@ -885,15 +891,7 @@ function App() {
                 return null;
               };
 
-              const isServiceCovered = (serviceName) => {
-                const sub = getServiceSubscription(serviceName);
-                if (!sub) return false;
-                // If it has limit fields, check them. If not (legacy/temp), assume covered.
-                if (sub.totalLimit !== undefined && sub.used !== undefined) {
-                  return sub.used < sub.totalLimit;
-                }
-                return true;
-              };
+              const isServiceCovered = (serviceName) => !!getServiceSubscription(serviceName);
               const isActiveServiceCovered = activeService && isServiceCovered(activeService.name);
 
               const handleChipClick = (svc) => {
@@ -952,10 +950,8 @@ function App() {
               const renderKgContent = () => {
                 const sub = getServiceSubscription(activeService.name);
                 const isCovered = !!sub;
-                const totalLimit = sub?.totalLimit || 0;
-                const used = sub?.used || 0;
-                const remaining = Math.max(0, totalLimit - used);
-                const isLimitExceeded = isCovered && used >= totalLimit;
+                const remaining = sub ? Math.max(0, sub.totalLimit - sub.used) : 0;
+                const isLimitExceeded = sub && sub.used >= sub.totalLimit;
 
                 return (
                   <div className="fade-in" style={{ 
@@ -1038,10 +1034,8 @@ function App() {
               const renderProductContent = () => {
                 const sub = getServiceSubscription(activeService.name);
                 const isCovered = !!sub;
-                const totalLimit = sub?.totalLimit || 0;
-                const used = sub?.used || 0;
-                const remaining = Math.max(0, totalLimit - used);
-                const isLimitExceeded = isCovered && used >= totalLimit;
+                const remaining = sub ? Math.max(0, sub.totalLimit - sub.used) : 0;
+                const isLimitExceeded = sub && sub.used >= sub.totalLimit;
 
                 return (
                   <div className="fade-in">
@@ -1091,9 +1085,8 @@ function App() {
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
                           {activeServiceProducts.map(prod => {
                             const qty = selectionQuantities[prod._id] || 0;
-                            const isProductSelected = !!selectionQuantities[prod._id];
-                            const sub = getServiceSubscription(activeService?.name);
-                            const isEffectivelyCovered = sub && !isLimitExceeded && (sub.used < sub.totalLimit);
+                            const isProductSelected = qty > 0;
+                            const isEffectivelyCovered = isCovered && !isLimitExceeded;
                             return (
                               <div
                                 key={prod._id}
