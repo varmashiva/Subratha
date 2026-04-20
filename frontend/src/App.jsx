@@ -279,14 +279,20 @@ function App() {
 
   // Auto-select covered service if user has an active subscription
   React.useEffect(() => {
-    if (activeSub && services.length > 0 && selectedServices.length === 0) {
-      const coveredService = services.find(s => s.name === activeSub.serviceType);
+    if (subscriptions.length > 0 && services.length > 0 && selectedServices.length === 0) {
+      // Find the first service that is covered by any active subscription
+      const coveredService = services.find(svc => {
+        const normalize = (s) => s?.toLowerCase().replace(/[^a-z]/g, '').replace('and', '').replace('ironing', 'iron');
+        const target = normalize(svc.name);
+        return subscriptions.some(sub => sub.status === 'Active' && (normalize(sub.service) === target || normalize(sub.plan) === target));
+      });
+
       if (coveredService) {
         setSelectedServices([coveredService]);
         setActiveServiceId(coveredService._id);
       }
     }
-  }, [activeSub, services, selectedServices.length]);
+  }, [subscriptions, services, selectedServices.length]);
 
   // Sync state to localStorage and MongoDB
   React.useEffect(() => {
@@ -1217,7 +1223,7 @@ function App() {
                   <p style={{ color: '#b6a3ce', fontSize: '0.9rem', marginBottom: '1.5rem', fontWeight: 500 }}>Select one or more services. Subscription-covered services are highlighted in green.</p>
 
                   {/* Active subscription/plan banner */}
-                  {(activeSub || selectedPlan) && (
+                  {(subscriptions.length > 0 || selectedPlan) && (
                     <div className="fade-in" style={{
                       marginBottom: '2rem',
                       background: 'linear-gradient(135deg, rgba(22,163,74,0.12) 0%, rgba(22,163,74,0.06) 100%)',
@@ -1258,10 +1264,10 @@ function App() {
                             letterSpacing: '0.06em',
                             textTransform: 'uppercase'
                           }}>
-                            {activeSub ? 'Active Member' : 'Plan Selected'}
+                             {subscriptions.length > 0 ? 'Active Member' : 'Plan Selected'}
                           </span>
                           <span style={{ color: '#16a34a', fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.01em' }}>
-                            {activeSub ? activeSub.plan : selectedPlan.name}
+                            {subscriptions.length > 0 ? (subscriptions[0].service || subscriptions[0].plan) : selectedPlan.name}
                           </span>
                         </div>
                         <div style={{ color: '#16a34a', fontSize: '0.85rem', fontWeight: 500, opacity: 0.9 }}>
@@ -1356,7 +1362,10 @@ function App() {
                         const newKgItems = kgServices
                           .filter(s => !cart.some(item => item.service === s.name && item.unit === 'kg'))
                           .map(s => {
-                            const isSubApplied = activeSub && activeSub.serviceType === s.name;
+                            const normalize = (val) => val?.toLowerCase().replace(/[^a-z]/g, '').replace('and', '').replace('ironing', 'iron');
+                            const target = normalize(s.name);
+                            const matchingSub = subscriptions.find(sub => sub.status === 'Active' && (normalize(sub.service) === target || normalize(sub.plan) === target));
+                            const isSubApplied = !!matchingSub && matchingSub.used < matchingSub.totalLimit;
                             return {
                               id: Date.now() + Math.random(),
                               product: 'Bulk/Weight',
