@@ -19,6 +19,25 @@ import HotelDashboard from './HotelDashboard';
 import AdminDashboard from './AdminDashboard';
 import ProfilePage from './ProfilePage';
 
+const SCHEDULE_STORAGE = {
+  pickup: {
+    orderStep: 'orderStep1',
+    cart: 'cart1',
+    orderDetails: 'orderDetails1',
+    selectedServiceIds: 'selectedServiceIds1',
+    selectionQuantities: 'selectionQuantities1',
+    selectedPlan: 'selectedPlan1',
+  },
+  subscription: {
+    orderStep: 'orderStep2',
+    cart: 'cart2',
+    orderDetails: 'orderDetails2',
+    selectedServiceIds: 'selectedServiceIds2',
+    selectionQuantities: 'selectionQuantities2',
+    selectedPlan: 'selectedPlan2',
+  },
+};
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
@@ -33,35 +52,40 @@ function App() {
   // Order Flow State
   const navigate = useNavigate();
   const location = useLocation();
+  const isScheduleRoute = location.pathname === '/schedule' || location.pathname === '/schedule-subscription';
+  const isSubscriptionSchedule = location.pathname === '/schedule-subscription';
+  const activeScheduleStorage = isSubscriptionSchedule ? SCHEDULE_STORAGE.subscription : SCHEDULE_STORAGE.pickup;
 
-  const handleAction = (signupToggle = false, isFromPlan = false) => {
+  const handleAction = (signupToggle = false, isFromPlan = false, redirectPath = '/schedule') => {
     // If starting a fresh order not from a specific Plan button, clear the selectedPlan
     if (!isFromPlan) {
       setSelectedPlan(null);
       localStorage.removeItem('selectedPlan');
+      localStorage.removeItem(SCHEDULE_STORAGE.pickup.selectedPlan);
+      localStorage.removeItem(SCHEDULE_STORAGE.subscription.selectedPlan);
     }
 
     if (!isAuthenticated) {
       setIsSignup(signupToggle);
       setShowAuthModal(true);
-      localStorage.setItem('postAuthRedirect', '/schedule');
+      localStorage.setItem('postAuthRedirect', redirectPath);
     } else {
-      navigate('/schedule');
+      navigate(redirectPath);
       setOrderStep(1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
-  const [orderStep, setOrderStep] = useState(() => Number(localStorage.getItem('orderStep')) || 1);
+  const [orderStep, setOrderStep] = useState(() => Number(localStorage.getItem(SCHEDULE_STORAGE.pickup.orderStep)) || 1);
   const [products, setProducts] = useState([]);
   const [services, setServices] = useState([]);
-  const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem('cart')) || []);
+  const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem(SCHEDULE_STORAGE.pickup.cart)) || []);
   const [selectedProduct, setSelectedProduct] = useState(null); // Keep for backwards compatibility if needed, but we'll use selectionQuantities for multi-select
-  const [selectionQuantities, setSelectionQuantities] = useState(() => JSON.parse(localStorage.getItem('selectionQuantities')) || {});
+  const [selectionQuantities, setSelectionQuantities] = useState(() => JSON.parse(localStorage.getItem(SCHEDULE_STORAGE.pickup.selectionQuantities)) || {});
   const [selectedServices, setSelectedServices] = useState([]);
   const [activeServiceId, setActiveServiceId] = useState(null);
   const [showSubConflictWarning, setShowSubConflictWarning] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  const [orderDetails, setOrderDetails] = useState(() => JSON.parse(localStorage.getItem('orderDetails')) || { address: '', time: '', service: '' });
+  const [orderDetails, setOrderDetails] = useState(() => JSON.parse(localStorage.getItem(SCHEDULE_STORAGE.pickup.orderDetails)) || { address: '', time: '', service: '' });
   const [selectedPlan, setSelectedPlan] = useState(() => JSON.parse(localStorage.getItem('selectedPlan')) || null);
 
   const fetchProducts = async () => {
@@ -79,7 +103,7 @@ function App() {
       if (user?.draftOrder?.selectedServiceIds) {
         savedServiceIds = user.draftOrder.selectedServiceIds;
       } else {
-        savedServiceIds = JSON.parse(localStorage.getItem('selectedServiceIds')) || [];
+        savedServiceIds = JSON.parse(localStorage.getItem(activeScheduleStorage.selectedServiceIds)) || [];
       }
 
       if (savedServiceIds.length > 0) {
@@ -122,7 +146,7 @@ function App() {
           if (dbDetails) setOrderDetails(dbDetails);
           
           if (dbIds && dbIds.length > 0) {
-            localStorage.setItem('selectedServiceIds', JSON.stringify(dbIds));
+            localStorage.setItem(activeScheduleStorage.selectedServiceIds, JSON.stringify(dbIds));
           }
         }
 
@@ -184,6 +208,14 @@ function App() {
     localStorage.removeItem('orderDetails');
     localStorage.removeItem('selectedServiceIds');
     localStorage.removeItem('selectionQuantities');
+    Object.values(SCHEDULE_STORAGE).forEach((storage) => {
+      localStorage.removeItem(storage.orderStep);
+      localStorage.removeItem(storage.cart);
+      localStorage.removeItem(storage.orderDetails);
+      localStorage.removeItem(storage.selectedServiceIds);
+      localStorage.removeItem(storage.selectionQuantities);
+      localStorage.removeItem(storage.selectedPlan);
+    });
     setIsAuthenticated(false);
     setUser(null);
     setShowProfileDropdown(false);
@@ -229,11 +261,12 @@ function App() {
         setActiveServiceId(null);
         setSelectedPlan(null);
         localStorage.removeItem('selectedPlan');
-        localStorage.removeItem('orderStep');
-        localStorage.removeItem('cart');
-        localStorage.removeItem('orderDetails');
-        localStorage.removeItem('selectedServiceIds');
-        localStorage.removeItem('selectionQuantities');
+        localStorage.removeItem(activeScheduleStorage.orderStep);
+        localStorage.removeItem(activeScheduleStorage.cart);
+        localStorage.removeItem(activeScheduleStorage.orderDetails);
+        localStorage.removeItem(activeScheduleStorage.selectedServiceIds);
+        localStorage.removeItem(activeScheduleStorage.selectionQuantities);
+        localStorage.removeItem(activeScheduleStorage.selectedPlan);
         fetchActiveSubscription(); // Refresh usage
       }
     } catch (err) {
@@ -283,8 +316,56 @@ function App() {
     fetchProducts();
   }, []);
 
+  React.useEffect(() => {
+    if (!isScheduleRoute) return;
+
+    const savedCart = JSON.parse(localStorage.getItem(activeScheduleStorage.cart)) || [];
+    const savedStep = Number(localStorage.getItem(activeScheduleStorage.orderStep)) || 1;
+    const savedOrderDetails = JSON.parse(localStorage.getItem(activeScheduleStorage.orderDetails)) || { address: '', time: '', service: '' };
+    const savedSelectionQuantities = JSON.parse(localStorage.getItem(activeScheduleStorage.selectionQuantities)) || {};
+    const savedServiceIds = JSON.parse(localStorage.getItem(activeScheduleStorage.selectedServiceIds)) || [];
+    const savedSelectedPlan = JSON.parse(localStorage.getItem(activeScheduleStorage.selectedPlan)) || null;
+
+    setCart(savedCart);
+    setOrderStep(savedStep);
+    setOrderDetails(savedOrderDetails);
+    setSelectionQuantities(savedSelectionQuantities);
+
+    if (isSubscriptionSchedule) {
+      setSelectedPlan(savedSelectedPlan || selectedPlan || null);
+    } else {
+      setSelectedPlan(null);
+    }
+
+    if (services.length > 0) {
+      const foundServices = services.filter((service) => savedServiceIds.includes(service._id));
+      if (foundServices.length > 0) {
+        setSelectedServices(foundServices);
+        setActiveServiceId(foundServices[foundServices.length - 1]._id);
+      } else if (!isSubscriptionSchedule && subscriptions.length > 0) {
+        const coveredService = services.find((svc) => {
+          const normalize = (s) => s?.toLowerCase().replace(/[^a-z]/g, '').replace('and', '').replace('ironing', 'iron');
+          const target = normalize(svc.name);
+          return subscriptions.some(sub => sub.status === 'Active' && (normalize(sub.service) === target || normalize(sub.plan) === target));
+        });
+
+        if (coveredService) {
+          setSelectedServices([coveredService]);
+          setActiveServiceId(coveredService._id);
+        } else {
+          setSelectedServices([]);
+          setActiveServiceId(null);
+        }
+      } else {
+        setSelectedServices([]);
+        setActiveServiceId(null);
+      }
+    }
+  }, [isScheduleRoute, isSubscriptionSchedule, activeScheduleStorage, services, subscriptions]);
+
   // Auto-select covered service if user has an active subscription
   React.useEffect(() => {
+    if (isSubscriptionSchedule) return;
     if (subscriptions.length > 0 && services.length > 0 && selectedServices.length === 0) {
       // Find the first service that is covered by any active subscription
       const coveredService = services.find(svc => {
@@ -300,29 +381,29 @@ function App() {
     }
   }, [subscriptions, services, selectedServices.length]);
 
-  // Sync state to localStorage and MongoDB
+  // Sync state to localStorage
   React.useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cart));
-    localStorage.setItem('orderStep', orderStep);
-    localStorage.setItem('orderDetails', JSON.stringify(orderDetails));
-    localStorage.setItem('selectionQuantities', JSON.stringify(selectionQuantities));
+    if (!isScheduleRoute) return;
+
+    localStorage.setItem(activeScheduleStorage.cart, JSON.stringify(cart));
+    localStorage.setItem(activeScheduleStorage.orderStep, orderStep);
+    localStorage.setItem(activeScheduleStorage.orderDetails, JSON.stringify(orderDetails));
+    localStorage.setItem(activeScheduleStorage.selectionQuantities, JSON.stringify(selectionQuantities));
     if (selectedPlan) {
       localStorage.setItem('selectedPlan', JSON.stringify(selectedPlan));
+      if (isSubscriptionSchedule) {
+        localStorage.setItem(activeScheduleStorage.selectedPlan, JSON.stringify(selectedPlan));
+      }
     } else {
       localStorage.removeItem('selectedPlan');
+      localStorage.removeItem(activeScheduleStorage.selectedPlan);
     }
     if (selectedServices.length > 0) {
-      localStorage.setItem('selectedServiceIds', JSON.stringify(selectedServices.map(s => s._id)));
+      localStorage.setItem(activeScheduleStorage.selectedServiceIds, JSON.stringify(selectedServices.map(s => s._id)));
     } else {
-      localStorage.removeItem('selectedServiceIds');
+      localStorage.removeItem(activeScheduleStorage.selectedServiceIds);
     }
-
-    // Debounced sync to MongoDB
-    const timeout = setTimeout(() => {
-      syncDraftOrder();
-    }, 1000);
-    return () => clearTimeout(timeout);
-  }, [cart, orderStep, orderDetails, selectedServices, selectionQuantities, selectedPlan]);
+  }, [cart, orderStep, orderDetails, selectedServices, selectionQuantities, selectedPlan, isScheduleRoute, isSubscriptionSchedule, activeScheduleStorage]);
 
   React.useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -737,21 +818,22 @@ function App() {
                             className="btn btn-primary"
                             style={{ width: '100%', marginTop: 'auto', padding: '1rem' }}
                             onClick={() => {
+                              const planServiceName = plan.name === 'Wash & Fold' ? 'Wash and dry' : plan.service;
                               const normalize = (s) => s?.toLowerCase().replace(/[^a-z]/g, '').replace('and', '').replace('ironing', 'iron');
-                              const s = services.find(gs => normalize(gs.name) === normalize(plan.service));
+                              const s = services.find(gs => normalize(gs.name) === normalize(planServiceName));
                               setSelectedPlan({ 
                                 name: plan.name, 
-                                service: plan.service,
+                                service: planServiceName,
                                 totalLimit: parseInt(plan.weight),
                                 used: 0
                               });
                               if (s) {
                                 setSelectedServices([s]);
                                 setActiveServiceId(s._id);
-                                handleAction(false, true);
+                                handleAction(false, true, '/schedule-subscription');
                                 setOrderStep(1);
                               } else {
-                                handleAction(false, true);
+                                handleAction(false, true, '/schedule-subscription');
                               }
                             }}
                           >
@@ -848,6 +930,546 @@ function App() {
         } />
 
         <Route path="/schedule" element={
+        <main className="container order-container fade-in">
+          <div className="mobile-only-brand" style={{ textAlign: 'center', marginBottom: '2rem', display: 'none' }}>
+            <span className="navbar-brand">Subratha</span>
+          </div>
+          <h2 style={{ textAlign: 'center', marginBottom: 'var(--space-lg)', fontSize: 'clamp(1.5rem, 5vw, 2.25rem)' }}>Schedule Premium Service</h2>
+
+          <div className="stepper-container">
+            <div className="stepper-line"></div>
+            <div className="stepper-progress" style={{ width: `${((orderStep - 1) / 3) * 100}%` }}></div>
+            {['Service', 'Address', 'Time', 'Review'].map((label, i) => {
+              const stepNum = i + 1;
+              const isCompleted = orderStep > stepNum;
+              const isActive = orderStep === stepNum;
+              return (
+                <div key={label} className={`step-item ${isCompleted ? 'completed' : isActive ? 'active' : ''}`}>
+                  <div className="step-circle">{isCompleted ? <CheckCircle size={20} /> : stepNum}</div>
+                  <div className="step-label">{label}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="order-step-content" key={orderStep}>
+            {orderStep === 1 && (() => {
+              const activeService = services.find(s => s._id === activeServiceId);
+              const activeServiceProducts = products
+                .filter(p => p.services.some(s => s.name === activeService?.name))
+                .map(p => ({ ...p, servicePrice: p.services.find(s => s.name === activeService?.name).price }));
+
+              const getServiceSubscription = (serviceName) => {
+                if (!serviceName || !subscriptions) return null;
+                const normalize = (s) => s?.toLowerCase().replace(/[^a-z]/g, '').replace('and', '').replace('ironing', 'iron');
+                const target = normalize(serviceName);
+                
+                // Check active subscriptions
+                const sub = subscriptions.find(s => 
+                  s.status === 'Active' && 
+                  (normalize(s.service) === target || normalize(s.plan) === target)
+                );
+                if (sub) return sub;
+
+                // Check selectedPlan (legacy/temporary)
+                if (selectedPlan && normalize(selectedPlan.service) === target) {
+                  return { ...selectedPlan, isTemporary: true };
+                }
+                
+                return null;
+              };
+
+              const isServiceCovered = (serviceName) => !!getServiceSubscription(serviceName);
+              const isActiveServiceCovered = activeService && isServiceCovered(activeService.name);
+
+              const handleChipClick = (svc) => {
+                const isSelected = selectedServices.some(s => s._id === svc._id);
+                const isActive = activeServiceId === svc._id;
+
+                if (isSelected) {
+                  if (isActive) {
+                    const newSelected = selectedServices.filter(s => s._id !== svc._id);
+                    setSelectedServices(newSelected);
+                    setActiveServiceId(newSelected.length > 0 ? newSelected[newSelected.length - 1]._id : null);
+                  } else {
+                    setActiveServiceId(svc._id);
+                  }
+                  setSelectionQuantities({});
+                } else {
+                  setSelectedServices([...selectedServices, svc]);
+                  setActiveServiceId(svc._id);
+                  setSelectionQuantities({});
+                }
+              };
+
+              const renderServiceChips = () => (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem' }}>
+                    {services.map(svc => {
+                      const isSelected = selectedServices.some(s => s._id === svc._id);
+                      const isActive = activeServiceId === svc._id;
+                      const isCovered = isServiceCovered(svc.name);
+
+                      return (
+                        <button
+                          key={svc._id}
+                          onClick={() => handleChipClick(svc)}
+                          style={{
+                            padding: '0.6rem 1.25rem', borderRadius: '100px', border: '1px solid',
+                            borderColor: isActive ? 'var(--color-primary)' : isCovered ? 'rgba(91,62,132,0.4)' : isSelected ? 'rgba(91,62,132,0.4)' : 'rgba(91,62,132,0.15)',
+                            background: isActive ? 'var(--color-primary)' : isCovered ? 'rgba(91,62,132,0.08)' : isSelected ? 'rgba(91,62,132,0.1)' : 'rgba(255,255,255,0.05)',
+                            color: isActive ? '#fff' : 'var(--color-primary)',
+                            cursor: 'pointer',
+                            fontWeight: 700, fontSize: '0.9rem', transition: 'all 0.2s',
+                            boxShadow: isCovered ? '0 4px 12px rgba(91,62,132,0.08)' : isActive ? '0 4px 12px rgba(91,62,132,0.2)' : 'none',
+                            position: 'relative',
+                            display: 'flex', alignItems: 'center', gap: '0.4rem',
+                          }}
+                        >
+                          {isCovered && <Zap size={14} fill={isActive ? '#fff' : 'var(--color-primary)'} color="var(--color-primary)" />}
+                          {svc.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+
+              const renderKgContent = () => {
+                const sub = getServiceSubscription(activeService.name);
+                const isCovered = !!sub;
+                const remaining = sub ? Math.max(0, sub.totalLimit - sub.used) : 0;
+                const isLimitExceeded = sub && sub.used >= sub.totalLimit;
+
+                return (
+                  <div className="fade-in" style={{ 
+                    background: (isCovered && !isLimitExceeded) ? 'linear-gradient(135deg, rgba(91,62,132,0.1) 0%, rgba(91,62,132,0.05) 100%)' : 'linear-gradient(135deg, rgba(91,62,132,0.08) 0%, rgba(91,62,132,0.03) 100%)', 
+                    borderRadius: '20px', 
+                    padding: '2.5rem', 
+                    border: `1px solid ${(isCovered && !isLimitExceeded) ? 'rgba(91,62,132,0.3)' : 'rgba(91,62,132,0.1)'}`,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    boxShadow: (isCovered && !isLimitExceeded) ? '0 15px 35px -10px rgba(91,62,132,0.15)' : 'none'
+                  }}>
+                    {isCovered && !isLimitExceeded ? (
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: 'linear-gradient(90deg, #5b3e84, #7c5cb5)', color: 'white', padding: '0.6rem 1.25rem', fontSize: '0.75rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.6rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                        <Zap size={14} fill="white" /> COVERED UNDER YOUR SUBSCRIPTION · REMAINING: {remaining} KG · TOTAL: ₹0
+                      </div>
+                    ) : isLimitExceeded ? (
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: '#d97706', color: 'white', padding: '0.6rem 1.25rem', fontSize: '0.75rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.6rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                        <AlertCircle size={14} /> SUBSCRIPTION LIMIT EXCEEDED · NORMAL PRICING APPLIES
+                      </div>
+                    ) : (
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: 'rgba(91,62,132,0.08)', color: 'var(--color-primary)', opacity: 0.8, padding: '0.6rem 1.25rem', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.6rem', textTransform: 'uppercase' }}>
+                        <AlertCircle size={14} /> NOT INCLUDED IN YOUR SUBSCRIPTION · NORMAL PRICING APPLIES
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem', marginTop: '1.75rem' }}>
+                      <div>
+                        <div style={{ fontSize: '0.85rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 800, marginBottom: '0.5rem' }}>Selected Service</div>
+                        <div style={{ fontWeight: 900, fontSize: '2rem', color: 'var(--color-primary)' }}>{activeService.name}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.85rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 800, marginBottom: '0.5rem' }}>Estimation Rate</div>
+                        <div style={{ fontWeight: 900, fontSize: '2rem', color: 'var(--color-primary)' }}>
+                          {(isCovered && !isLimitExceeded) ? 'Rs. 0 (Included)' : `Rs. ${activeService.basePrice} / kg`}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', color: 'var(--color-text)', fontSize: '1.05rem', fontWeight: 600 }}>
+                        <CheckCircle size={20} color="var(--color-primary)" />
+                        <span>Final weight will be measured at pickup</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', color: 'var(--color-text)', fontSize: '1.05rem', fontWeight: 600 }}>
+                        <CheckCircle size={20} color={(isCovered && !isLimitExceeded) ? 'var(--color-primary)' : 'var(--color-primary)'} />
+                        <span>Exact price will be updated after inspection</span>
+                      </div>
+                    </div>
+
+                    <button
+                      className="btn btn-primary"
+                      disabled={cart.some(item => item.service === activeService.name)}
+                      style={{ 
+                        width: '100%', marginTop: '2rem', padding: '1rem', 
+                        background: (isCovered && !isLimitExceeded) ? 'linear-gradient(90deg, #5b3e84, #7c5cb5)' : 'var(--color-primary)',
+                        opacity: cart.some(item => item.service === activeService.name) ? 0.6 : 1,
+                        cursor: cart.some(item => item.service === activeService.name) ? 'not-allowed' : 'pointer',
+                        border: 'none', boxShadow: (isCovered && !isLimitExceeded) ? '0 10px 25px -5px rgba(91,62,132,0.3)' : '0 10px 25px -5px rgba(91,62,132,0.2)'
+                      }}
+                      onClick={() => {
+                        const newItem = {
+                          id: Date.now(),
+                          product: activeService.name,
+                          service: activeService.name,
+                          quantity: 0, // Weight determined at pickup
+                          unit: 'kg',
+                          price: (isCovered && !isLimitExceeded) ? 0 : activeService.basePrice,
+                          total: 0,
+                          subscriptionApplied: isCovered && !isLimitExceeded,
+                        };
+                        setCart([...cart, newItem]);
+                      }}
+                    >
+                      {cart.some(item => item.service === activeService.name) ? 'Already in Bag' : 'Add Service to Bag'}
+                    </button>
+                  </div>
+                );
+              };
+
+              const renderProductContent = () => {
+                const sub = getServiceSubscription(activeService.name);
+                const isCovered = !!sub;
+                const remaining = sub ? Math.max(0, sub.totalLimit - sub.used) : 0;
+                const isLimitExceeded = sub && sub.used >= sub.totalLimit;
+
+                return (
+                  <div className="fade-in">
+                    {/* Subscription status banner */}
+                    {isCovered && !isLimitExceeded ? (
+                      <div style={{
+                        background: 'linear-gradient(90deg, #5b3e84, #7c5cb5)',
+                        color: 'white', padding: '0.85rem 1.25rem', fontSize: '0.85rem', fontWeight: 900,
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        borderRadius: '14px', marginBottom: '1.5rem',
+                        boxShadow: '0 8px 20px rgba(91,62,132,0.2)',
+                        letterSpacing: '0.04em', textTransform: 'uppercase'
+                      }}>
+                        <Zap size={18} fill="white" />
+                        COVERED UNDER YOUR SUBSCRIPTION · REMAINING: {remaining} KG · TOTAL: ₹0
+                      </div>
+                    ) : isLimitExceeded ? (
+                      <div style={{
+                        background: '#d97706',
+                        color: 'white', padding: '0.85rem 1.25rem', fontSize: '0.85rem', fontWeight: 900,
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        borderRadius: '14px', marginBottom: '1.5rem',
+                        boxShadow: '0 8px 20px rgba(217,119,6,0.2)',
+                        letterSpacing: '0.04em', textTransform: 'uppercase'
+                      }}>
+                        <AlertCircle size={18} fill="white" />
+                        SUBSCRIPTION LIMIT EXCEEDED · NORMAL PRICING APPLIES
+                      </div>
+                    ) : (
+                      <div style={{
+                        background: 'rgba(91,62,132,0.05)', border: '1px solid rgba(91,62,132,0.12)',
+                        color: 'var(--color-text)', padding: '0.85rem 1.25rem', fontSize: '0.85rem', fontWeight: 700,
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        borderRadius: '14px', marginBottom: '1.5rem', opacity: 0.85,
+                      }}>
+                        <AlertCircle size={18} />
+                        NOT INCLUDED IN YOUR SUBSCRIPTION · NORMAL PRICING APPLIES
+                      </div>
+                    )}
+
+                    {activeServiceProducts.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '3rem', color: '#b6a3ce', background: 'rgba(91,62,132,0.05)', borderRadius: '12px' }}>
+                        No products found for this service.
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                          {activeServiceProducts.map(prod => {
+                            const qty = selectionQuantities[prod._id] || 0;
+                            const isProductSelected = qty > 0;
+                            const isEffectivelyCovered = isCovered && !isLimitExceeded;
+                            return (
+                              <div
+                                key={prod._id}
+                                onClick={() => {
+                                  if (!isProductSelected) {
+                                    setSelectionQuantities({ ...selectionQuantities, [prod._id]: 1 });
+                                  }
+                                }}
+                                className="product-card"
+                                style={{
+                                  border: `1.5px solid ${isProductSelected
+                                    ? 'var(--color-primary)'
+                                    : 'rgba(91,62,132,0.1)'}`,
+                                  borderRadius: '16px', padding: '1.25rem', cursor: 'pointer',
+                                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                  textAlign: 'center', position: 'relative',
+                                  boxShadow: isProductSelected ? '0 8px 20px rgba(91,62,132,0.1)' : 'none',
+                                }}
+                              >
+                                <div style={{ fontWeight: 800, color: 'var(--color-primary)', fontSize: '0.95rem', marginBottom: '0.4rem' }}>{prod.name}</div>
+                                {activeService?.type !== 'Global' && (
+                                  isEffectivelyCovered ? (
+                                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--color-primary)' }}>₹0 (Covered)</div>
+                                  ) : (
+                                    <>
+                                      <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--color-text)' }}>Rs. {prod.servicePrice}</div>
+                                      <div style={{ fontSize: '0.75rem', color: '#b6a3ce', textTransform: 'uppercase' }}>per piece</div>
+                                    </>
+                                  )
+                                )}
+
+                                {isProductSelected && (
+                                  <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }} onClick={e => e.stopPropagation()}>
+                                    <button onClick={() => {
+                                      const newQty = qty - 1;
+                                      if (newQty <= 0) {
+                                        const newSelection = { ...selectionQuantities };
+                                        delete newSelection[prod._id];
+                                        setSelectionQuantities(newSelection);
+                                      } else {
+                                        setSelectionQuantities({ ...selectionQuantities, [prod._id]: newQty });
+                                      }
+                                    }} style={{ width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: 'var(--color-primary)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                                    <span style={{ fontWeight: 900, minWidth: '24px', fontSize: '1.1rem' }}>{qty}</span>
+                                    <button onClick={() => setSelectionQuantities({ ...selectionQuantities, [prod._id]: qty + 1 })} style={{ width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: 'var(--color-primary)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {Object.keys(selectionQuantities).length > 0 && (
+                          <div style={{
+                            background: (isCovered && !isLimitExceeded) ? 'linear-gradient(90deg, #16a34a, #15803d)' : 'var(--color-primary)',
+                            borderRadius: '16px', padding: '1.25rem', marginBottom: '2rem',
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            color: '#fff', boxShadow: (isCovered && !isLimitExceeded) ? '0 8px 24px rgba(22,163,74,0.25)' : '0 8px 24px rgba(91,62,132,0.2)',
+                          }}>
+                            <div>
+                              <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{Object.keys(selectionQuantities).length} Items Selected</div>
+                              <div style={{ fontSize: '0.85rem', opacity: 0.85 }}>{activeService.name} · {(isCovered && !isLimitExceeded) ? 'Covered under subscription' : isLimitExceeded ? 'Limit exceeded · Normal pricing applies' : "Click '+' to add to bag"}</div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                              <div style={{ fontWeight: 900, fontSize: '1.5rem' }}>
+                                {(isCovered && !isLimitExceeded) ? '₹0 (Covered)' : (() => {
+                                  const total = Object.entries(selectionQuantities).reduce((acc, [id, qty]) => {
+                                    const p = activeServiceProducts.find(prod => prod._id === id);
+                                    return acc + (p?.servicePrice || 0) * qty;
+                                  }, 0);
+                                  return `Rs. ${total}`;
+                                })()}
+                              </div>
+                              <button
+                                className="btn btn-secondary"
+                                style={{ padding: '0.6rem 1.5rem', background: '#fff', color: (isCovered && !isLimitExceeded) ? '#16a34a' : 'var(--color-primary)', fontWeight: 800 }}
+                                onClick={() => {
+                                  const newItems = Object.entries(selectionQuantities).map(([id, qty]) => {
+                                    const prod = activeServiceProducts.find(p => p._id === id);
+                                    return {
+                                      id: Date.now() + Math.random(),
+                                      product: prod.name,
+                                      service: activeService.name,
+                                      quantity: qty,
+                                      unit: 'pcs',
+                                      price: (isCovered && !isLimitExceeded) ? 0 : prod.servicePrice,
+                                      total: (isCovered && !isLimitExceeded) ? 0 : prod.servicePrice * qty,
+                                      subscriptionApplied: isCovered && !isLimitExceeded,
+                                    };
+                                  });
+                                  setCart([...cart, ...newItems]);
+                                  setSelectionQuantities({});
+                                }}
+                              >Add to Bag</button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              };
+
+              const renderCartContent = () => {
+                if (cart.length === 0) return null;
+                return (
+                  <div className="fade-in" style={{ marginTop: '2.5rem' }}>
+                    <h4 style={{ color: 'var(--color-primary)', fontWeight: 800, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Shirt size={20} /> Your Bag ({cart.length} {cart.length === 1 ? 'item' : 'items'})
+                    </h4>
+                    <div style={{ overflowX: 'auto', borderRadius: '16px', border: '1px solid rgba(91,62,132,0.1)', background: 'rgba(255,255,255,0.02)' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ background: 'rgba(91,62,132,0.05)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <th style={{ padding: '1rem', textAlign: 'left' }}>Item</th>
+                            <th style={{ padding: '1rem', textAlign: 'center' }}>Qty</th>
+                            <th style={{ padding: '1rem', textAlign: 'right' }}>Price</th>
+                            <th style={{ padding: '1rem', width: '50px' }}></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                           {cart.map(item => {
+                            const svc = services.find(s => s.name === item.service);
+                            const isSubUsed = item.subscriptionApplied;
+                            return (
+                              <tr key={item.id} style={{ borderTop: '1px solid rgba(91,62,132,0.05)' }}>
+                                <td style={{ padding: '1rem' }}>
+                                  <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    {item.product}
+                                    {isSubUsed && (
+                                      <span style={{
+                                        fontSize: '0.65rem', fontWeight: 900, background: 'rgba(91,62,132,0.12)',
+                                        color: 'var(--color-primary)', padding: '0.15rem 0.6rem', borderRadius: '100px',
+                                        border: '1px solid rgba(91,62,132,0.2)', letterSpacing: '0.04em',
+                                        textTransform: 'uppercase'
+                                      }}>⚡ Covered</span>
+                                    )}
+                                  </div>
+                                  <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{item.service}</div>
+                                </td>
+                                <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 700 }}>{item.quantity || '—'}</td>
+                                <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 800, color: isSubUsed ? 'var(--color-primary)' : 'inherit' }}>
+                                  {(() => {
+                                    if (item.unit === 'kg' || svc?.type === 'Global') {
+                                      return isSubUsed ? '₹0/kg ✓' : `Rs. ${svc?.basePrice || item.price}/kg`;
+                                    }
+                                    return isSubUsed ? '₹0 ✓' : `Rs. ${item.total}`;
+                                  })()}
+                                </td>
+                                <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                  <button onClick={() => setCart(cart.filter(i => i.id !== item.id))} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><X size={18} /></button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          <tr style={{ background: 'rgba(91,62,132,0.03)', fontWeight: 700, fontSize: '0.9rem' }}>
+                            <td colSpan="4" style={{ padding: '1.25rem', textAlign: 'center', color: 'var(--color-primary)' }}>
+                              Total price will be finalised in the review process
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              };
+
+              return (
+                <div className="fade-in">
+                  <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-primary)', fontWeight: 800 }}>Add Laundry Items</h3>
+                  <p style={{ color: '#b6a3ce', fontSize: '0.9rem', marginBottom: '1.5rem', fontWeight: 500 }}>Select one or more services. Subscription-covered services are highlighted in green.</p>
+
+
+                  {renderServiceChips()}
+
+                  {!activeService ? (
+                    <div style={{ textAlign: 'center', padding: '4rem 2rem', color: '#b6a3ce', background: 'rgba(91,62,132,0.03)', borderRadius: '16px', border: '1px dashed rgba(91,62,132,0.2)' }}>
+                      Select a service above to get started
+                    </div>
+                  ) : activeService.unit === 'kg' ? renderKgContent() : renderProductContent()}
+
+                  {renderCartContent()}
+                </div>
+              );
+            })()}
+            {orderStep === 2 && (
+              <div className="fade-in">
+                <h3>Pickup Address</h3>
+                <div className="input-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Street Address</label>
+                  <textarea className="form-input" style={{ minHeight: '120px' }} value={orderDetails.address} onChange={(e) => setOrderDetails({ ...orderDetails, address: e.target.value })} placeholder="Enter your full pickup & delivery address..." />
+                </div>
+              </div>
+            )}
+
+            {orderStep === 3 && (
+              <div className="fade-in">
+                <h3>Choose Pickup Time</h3>
+                <div className="options-grid">
+                  {['Morning (9 AM - 12 PM)', 'Afternoon (12 PM - 4 PM)', 'Evening (4 PM - 8 PM)'].map(t => (
+                    <div key={t} className={`option-card ${orderDetails.time === t ? 'selected' : ''}`} onClick={() => setOrderDetails({ ...orderDetails, time: t })}>
+                      <div className="option-icon"><Clock size={32} style={{ margin: '0 auto' }} /></div>
+                      <h4 style={{ fontSize: '1rem', lineHeight: '1.4' }}>{t}</h4>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {orderStep === 4 && (
+              <div className="fade-in">
+                <h3>Review Your Order</h3>
+                <div className="summary-details">
+                  <div className="summary-row">
+                    <span className="summary-label">Items</span>
+                    <span className="summary-value" style={{ textAlign: "right" }}>{cart.length} item(s)</span>
+                  </div>
+                  <div className="summary-row" style={{ borderTop: "1px solid var(--color-border)", paddingTop: "1rem", marginTop: "0.5rem", justifyContent: 'center' }}>
+                    <span className="summary-value" style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>
+                      Total price will be finaled in review process
+                    </span>
+                  </div>
+                  <div className="summary-row">
+                    <span className="summary-label">Address</span>
+                    <span className="summary-value" style={{ textAlign: 'right', maxWidth: '60%' }}>{orderDetails.address}</span>
+                  </div>
+                  <div className="summary-row">
+                    <span className="summary-label">Pickup Time</span>
+                    <span className="summary-value">{orderDetails.time}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="order-actions">
+              {orderStep > 1 ? (
+                <button className="btn btn-secondary" style={{ padding: '0.8rem 2rem' }} onClick={() => setOrderStep(orderStep - 1)}>Back</button>
+              ) : (
+                  <button className="btn btn-secondary" style={{ padding: '0.8rem 2rem' }} onClick={() => {
+                    setSelectedPlan(null);
+                    localStorage.removeItem('selectedPlan');
+                    localStorage.removeItem(activeScheduleStorage.selectedPlan);
+                    navigate('/');
+                  }}>Cancel</button>
+              )}
+
+              {orderStep < 4 ? (
+                <button
+                  className="btn btn-primary"
+                  style={{ padding: '0.8rem 2rem' }}
+                  onClick={() => {
+                    if (orderStep === 1) {
+                      const kgServices = selectedServices.filter(s => s.unit === 'kg');
+                      if (kgServices.length > 0) {
+                        const newKgItems = kgServices
+                          .filter(s => !cart.some(item => item.service === s.name && item.unit === 'kg'))
+                          .map(s => {
+                            const normalize = (val) => val?.toLowerCase().replace(/[^a-z]/g, '').replace('and', '').replace('ironing', 'iron');
+                            const target = normalize(s.name);
+                            const matchingSub = subscriptions.find(sub => sub.status === 'Active' && (normalize(sub.service) === target || normalize(sub.plan) === target));
+                            const isSubApplied = !!matchingSub && matchingSub.used < matchingSub.totalLimit;
+                            return {
+                              id: Date.now() + Math.random(),
+                              product: 'Bulk/Weight',
+                              service: s.name,
+                              quantity: 0,
+                              unit: 'kg',
+                              price: isSubApplied ? 0 : s.basePrice,
+                              total: 0,
+                              subscriptionApplied: !!isSubApplied
+                            };
+                          });
+                        if (newKgItems.length > 0) {
+                          setCart(prev => [...prev, ...newKgItems]);
+                        }
+                      }
+                    }
+                    setOrderStep(orderStep + 1);
+                  }}
+                  disabled={
+                    (orderStep === 1 && selectedServices.length === 0) ||
+                    (orderStep === 2 && !orderDetails.address.trim()) ||
+                    (orderStep === 3 && !orderDetails.time)
+                  }
+                >Next Step</button>
+              ) : (
+                <button className="btn btn-primary" style={{ padding: '0.8rem 2rem' }} onClick={handleOrderSubmit}>Confirm Order</button>
+              )}
+
+            </div>
+          </div>
+        </main>
+        } />
+
+        <Route path="/schedule-subscription" element={
         <main className="container order-container fade-in">
           <div className="mobile-only-brand" style={{ textAlign: 'center', marginBottom: '2rem', display: 'none' }}>
             <span className="navbar-brand">Subratha</span>
