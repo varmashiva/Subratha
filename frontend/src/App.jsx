@@ -230,6 +230,36 @@ function App() {
     return cart.reduce((sum, item) => sum + item.total, 0);
   };
 
+  const mergeCartItems = (existingCart, incomingItems) => {
+    const itemsToAdd = Array.isArray(incomingItems) ? incomingItems : [incomingItems];
+
+    return itemsToAdd.reduce((nextCart, incomingItem) => {
+      const existingIndex = nextCart.findIndex(
+        (item) =>
+          item.product === incomingItem.product &&
+          item.service === incomingItem.service &&
+          item.unit === incomingItem.unit
+      );
+
+      if (existingIndex === -1) {
+        return [...nextCart, incomingItem];
+      }
+
+      const matchedItem = nextCart[existingIndex];
+      const mergedItem = {
+        ...matchedItem,
+        quantity: (matchedItem.quantity || 0) + (incomingItem.quantity || 0),
+        total: (matchedItem.total || 0) + (incomingItem.total || 0),
+        price: incomingItem.price ?? matchedItem.price,
+        subscriptionApplied: matchedItem.subscriptionApplied || incomingItem.subscriptionApplied,
+      };
+
+      const updatedCart = [...nextCart];
+      updatedCart[existingIndex] = mergedItem;
+      return updatedCart;
+    }, existingCart);
+  };
+
   const handleOrderSubmit = async () => {
     setIsLoading(true);
     try {
@@ -1110,7 +1140,7 @@ function App() {
                           total: 0,
                           subscriptionApplied: isCovered && !isLimitExceeded,
                         };
-                        setCart([...cart, newItem]);
+                        setCart(prev => mergeCartItems(prev, newItem));
                       }}
                     >
                       {cart.some(item => item.service === activeService.name) ? 'Already in Bag' : 'Add Service to Bag'}
@@ -1265,7 +1295,7 @@ function App() {
                                       subscriptionApplied: isCovered && !isLimitExceeded,
                                     };
                                   });
-                                  setCart([...cart, ...newItems]);
+                                  setCart(prev => mergeCartItems(prev, newItems));
                                   setSelectionQuantities({});
                                 }}
                               >Add to Bag</button>
@@ -1650,7 +1680,7 @@ function App() {
                           total: 0,
                           subscriptionApplied: isCovered && !isLimitExceeded,
                         };
-                        setCart([...cart, newItem]);
+                        setCart(prev => mergeCartItems(prev, newItem));
                       }}
                     >
                       {cart.some(item => item.service === activeService.name) ? 'Already in Bag' : 'Add Service to Bag'}
@@ -1805,7 +1835,7 @@ function App() {
                                       subscriptionApplied: isCovered && !isLimitExceeded,
                                     };
                                   });
-                                  setCart([...cart, ...newItems]);
+                                  setCart(prev => mergeCartItems(prev, newItems));
                                   setSelectionQuantities({});
                                 }}
                               >Add to Bag</button>
