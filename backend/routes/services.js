@@ -25,10 +25,19 @@ const isAdmin = (req, res, next) => {
   }
 };
 
+let serviceCache = null;
+let lastCacheUpdate = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 // Public: Get all services
 router.get('/', async (req, res) => {
   try {
+    if (serviceCache && (Date.now() - lastCacheUpdate < CACHE_DURATION)) {
+      return res.json(serviceCache);
+    }
     const services = await Service.find().sort({ name: 1 });
+    serviceCache = services;
+    lastCacheUpdate = Date.now();
     res.json(services);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching services' });
@@ -39,6 +48,7 @@ router.get('/', async (req, res) => {
 router.post('/', protect, isAdmin, async (req, res) => {
   try {
     const service = await Service.create(req.body);
+    serviceCache = null; // Invalidate cache
     res.status(201).json(service);
   } catch (error) {
     res.status(500).json({ message: 'Error creating service' });
@@ -49,6 +59,7 @@ router.post('/', protect, isAdmin, async (req, res) => {
 router.put('/:id', protect, isAdmin, async (req, res) => {
   try {
     const service = await Service.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    serviceCache = null; // Invalidate cache
     res.json(service);
   } catch (error) {
     res.status(500).json({ message: 'Error updating service' });
@@ -59,10 +70,12 @@ router.put('/:id', protect, isAdmin, async (req, res) => {
 router.delete('/:id', protect, isAdmin, async (req, res) => {
   try {
     await Service.findByIdAndDelete(req.params.id);
+    serviceCache = null; // Invalidate cache
     res.json({ message: 'Service deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting service' });
   }
 });
+
 
 export default router;

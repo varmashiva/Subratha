@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import axios from 'axios';
 
 // Configure Axios
@@ -15,9 +15,19 @@ axios.interceptors.request.use((config) => {
 import { X, LogIn, Waves, Shirt, Zap, Tag, ShieldCheck, Award, MapPin, CheckCircle, Clock, User, Menu, AlertCircle } from 'lucide-react';
 import './index.css';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import HotelDashboard from './HotelDashboard';
-import AdminDashboard from './AdminDashboard';
-import ProfilePage from './ProfilePage';
+
+const HotelDashboard = lazy(() => import('./HotelDashboard'));
+const AdminDashboard = lazy(() => import('./AdminDashboard'));
+const ProfilePage = lazy(() => import('./ProfilePage'));
+import Navbar from './components/Navbar';
+import Hero from './components/Hero';
+import Story from './components/Story';
+import Benefits from './components/Benefits';
+import AuthModal from './components/AuthModal';
+import SubscriptionPlans from './components/SubscriptionPlans';
+import HowItWorks from './components/HowItWorks';
+
+
 
 const SCHEDULE_STORAGE = {
   pickup: {
@@ -596,226 +606,42 @@ function App() {
           <p>Loading...</p>
         </div>
       )}
-      <Routes>
-        <Route path="/admin" element={<AdminDashboard onLogout={() => navigate('/')} />} />
-        <Route path="/hotel" element={<HotelDashboard onLogout={() => navigate('/')} />} />
-        <Route path="/profile" element={<ProfilePage user={user} onBack={() => navigate('/')} onLogout={() => { handleLogout(); navigate('/'); }} />} />
+      <Suspense fallback={
+        <div className="loading-overlay">
+          <div className="spinner spinner-lg"></div>
+          <p>Loading...</p>
+        </div>
+      }>
+        <Routes>
+          <Route path="/admin" element={<AdminDashboard onLogout={() => navigate('/')} />} />
+          <Route path="/hotel" element={<HotelDashboard onLogout={() => navigate('/')} />} />
+          <Route path="/profile" element={<ProfilePage user={user} onBack={() => navigate('/')} onLogout={() => { handleLogout(); navigate('/'); }} />} />
+
 
         {/* Customer Facing Layout Wrapper */}
         <Route path="/*" element={
           <>
-            <header>
-        <nav className="navbar fade-in">
-          <a href="/" className="navbar-brand">Subratha</a>
-          <div className="flex-row">
-            {!isAuthenticated ? (
-              <div
-                className="user-profile user-profile--guest"
-                onClick={() => { setIsSignup(false); setShowAuthModal(true); localStorage.setItem('postAuthRedirect', '/'); }}
-                title="Sign In"
-              >
-                <div className="user-avatar user-avatar--guest">
-                  <User size={22} strokeWidth={1.5} />
-                </div>
-              </div>
-            ) : (
-              <div
-                className="user-profile"
-                onClick={() => {
-                  if (user?.role === 'admin') {
-                    setShowProfileDropdown(!showProfileDropdown);
-                  } else {
-                    navigate('/profile');
-                  }
-                }}
-              >
-                <div className="user-avatar">
-                  {user?.picture ? (
-                    <img src={user.picture} alt={user.name} />
-                  ) : (
-                    user?.name ? user.name.charAt(0).toUpperCase() : 'S'
-                  )}
-                </div>
+            <Navbar
+              isAuthenticated={isAuthenticated}
+              user={user}
+              showProfileDropdown={showProfileDropdown}
+              setShowProfileDropdown={setShowProfileDropdown}
+              handleLogout={handleLogout}
+              showMobileMenu={showMobileMenu}
+              setShowMobileMenu={setShowMobileMenu}
+              handleAction={handleAction}
+              setIsSignup={setIsSignup}
+              setShowAuthModal={setShowAuthModal}
+            />
 
-                {showProfileDropdown && user?.role === 'admin' && (
-                  <div className="dropdown-menu">
-                    <button
-                      className="dropdown-item"
-                      style={{ color: 'var(--color-primary)', fontWeight: '600' }}
-                      onClick={() => { navigate('/admin'); setShowProfileDropdown(false); }}
-                    >
-                      ⚙ Admin Dashboard
-                    </button>
-                    <button className="dropdown-item" onClick={() => { navigate('/profile'); setShowProfileDropdown(false); }}>
-                      <User size={16} /> My Profile
-                    </button>
-                    <div className="dropdown-divider"></div>
-                    <button className="dropdown-item text-danger" onClick={handleLogout}>
-                      <LogIn size={16} style={{ transform: 'rotate(180deg)' }} /> Logout
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-
-          </div>
-
-          {/* Mobile Menu Overlay */}
-          {showMobileMenu && (
-            <>
-              <div className={`nav-overlay ${showMobileMenu ? 'active' : ''}`} onClick={() => setShowMobileMenu(false)}></div>
-              <div className={`mobile-menu-overlay ${showMobileMenu ? 'active' : ''}`} onClick={() => setShowMobileMenu(false)}>
-              <div className="mobile-menu-content" onClick={(e) => e.stopPropagation()}>
-                <div className="mobile-menu-header">
-                  <span className="navbar-brand">Subratha</span>
-                  <button className="mobile-menu-close" onClick={() => setShowMobileMenu(false)}>
-                    <X size={28} />
-                  </button>
-                </div>
-                <div className="mobile-menu-links">
-                  <a href="/" onClick={() => setShowMobileMenu(false)}>Home</a>
-                  <button onClick={() => { handleAction(true); setShowMobileMenu(false); }}>Schedule Pickup</button>
-                  <a href="#" onClick={() => setShowMobileMenu(false)}>Our Services</a>
-                  <div className="mobile-menu-divider"></div>
-                  {isAuthenticated ? (
-                    <>
-                      {user?.role === 'admin' && (
-                        <button className="mobile-menu-item admin-link" onClick={() => { setIsAdminPortal(true); setShowMobileMenu(false); }}>
-                          ⚙ Admin Dashboard
-                        </button>
-                      )}
-                      <button className="mobile-menu-item" onClick={() => { setShowProfilePage(true); setShowMobileMenu(false); }}>My Profile</button>
-                      <button className="mobile-menu-item text-danger" onClick={() => { handleLogout(); setShowMobileMenu(false); }}>
-                        Logout
-                      </button>
-                    </>
-                  ) : (
-                    <button className="mobile-menu-item" onClick={() => { setIsSignup(false); setShowAuthModal(true); setShowMobileMenu(false); localStorage.setItem('postAuthRedirect', '/'); }}>
-                      Sign In
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-            </>
-          )}
-        </nav>
-      </header>
 
       <Routes>
         <Route path="/" element={
         <>
-          <main className="hero-wrapper fade-in" style={{ animationDelay: '0.2s' }}>
-            <video
-              className="hero-video-mobile"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-            >
-              <source src="/images/mobile_land.mov" type="video/mp4" />
-              <source src="/images/mobile_land.mov" type="video/quicktime" />
-            </video>
-            <div className="hero-content">
-              <div className="hero-glass-box">
-                <h1 className="reveal-text">
-                  <span className="reveal-text-inner" style={{ animationDelay: '0.4s' }}>Subratha</span>
-                  <span className="reveal-text-inner" style={{ animationDelay: '0.6s' }}>Concierge</span>
-                </h1>
+          <Hero handleAction={handleAction} />
 
-                <div className="hero-separator fade-in" style={{ animationDelay: '0.8s' }}></div>
 
-                <div className="hero-meta fade-in" style={{ animationDelay: '0.9s' }}>
-                  <span className="dot"></span>
-                  <span className="letter-animation">
-                    {"Service 01/04".split('').map((char, i) => (
-                      <span key={i} className={`stagger-${(i % 5) + 1}`} style={{ animationDelay: `${1.0 + (i * 0.05)}s` }}>{char === ' ' ? '\u00A0' : char}</span>
-                    ))}
-                  </span>
-                </div>
-
-                <p className="hero-subtext fade-in" style={{ animationDelay: '1.2s' }}>
-                  A premium wardrobe care community with professional handling and door-to-door concierge service.
-                </p>
-
-                <div className="hero-actions fade-in" style={{ animationDelay: '0.8s' }}>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => handleAction(true)}
-                  >
-                    Schedule Pickup
-                  </button>
-                </div>
-              </div>
-            </div>
-          </main>
-
-          {/* Storytelling Section */}
-          <section className="story-scroll-container" ref={storyRef}>
-            <div className="story-sticky-wrapper">
-              <div className="story-grid">
-                <div className="story-left">
-                  {[1, 2, 3, 4].map(n => (
-                    <h2 key={n} className={`story-number ${activeStep === n ? 'active' : activeStep > n ? 'past' : 'next'}`}>
-                      {n}
-                    </h2>
-                  ))}
-                </div>
-
-                <div className="story-right">
-                  {[
-                    {
-                      step: 1,
-                      label: "Everyday Care",
-                      title: "Wash and fold",
-                      desc: "Perfectly cleaned and dried everyday wear for maximum comfort and hygiene, delivered fresh to your door.",
-                      img: "/images/service-1.jpg"
-                    },
-                    {
-                      step: 2,
-                      label: "Crisp & Clean",
-                      title: "Wash and iron",
-                      desc: "Deep cleaning followed by professional ironing for a sharp, fresh look suitable for business or formal wear.",
-                      img: "/images/service-2.jpg"
-                    },
-                    {
-                      step: 3,
-                      label: "Premium Treatment",
-                      title: "Wash and steam iron",
-                      desc: "Delicate washing with professional steam ironing to preserve fabric quality and provide a wrinkle-free finish.",
-                      img: "/images/wash-steam.png"
-                    },
-                    {
-                      step: 4,
-                      label: "Expert Care",
-                      title: "Dry clean",
-                      desc: "Specialized eco-friendly chemical cleaning for delicate fabrics, high-end garments, and designer wear.",
-                      img: "/images/service-4.jpg"
-                    }
-                  ].map((s) => (
-                    <div key={s.step} className={`story-step-content ${activeStep === s.step ? 'active' : activeStep > s.step ? 'past' : 'next'}`}>
-                      <span className="story-label">{s.label}</span>
-                      <h3 className="story-title">{s.title}</h3>
-                      <div className="story-image-wrap">
-                        <img src={s.img} alt={s.title} />
-                      </div>
-                      <p className="story-description">{s.desc}</p>
-                      <div className="story-actions">
-                        <button
-                          className="btn btn-primary"
-                          onClick={() => handleAction(true)}
-                        >
-                          Schedule Pickup
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
+          <Story storyRef={storyRef} activeStep={activeStep} handleAction={handleAction} />
 
           {/* Section Divider */}
           <div className="section-divider" style={{ padding: 'var(--space-lg) 0' }}>
@@ -824,243 +650,32 @@ function App() {
             </div>
           </div>
 
-          {/* Why Subratha Section */}
-          <section className="container section subratha-section" style={{ paddingTop: 0, paddingBottom: 0, textAlign: 'center' }}>
-            <div className="scroll-reveal" style={{ transitionDelay: '0.1s' }}>
-              <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, marginBottom: '1rem' }}>Why Subratha?</h2>
-              <p style={{ color: 'var(--color-text-dim)', fontSize: '1.2rem', maxWidth: '600px', margin: '0 auto 3rem' }}>
-                The gold standard in modern laundry & garment care.
-              </p>
-            </div>
+          <Benefits handleAction={handleAction} />
 
-            <div className="benefits-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2.5rem' }}>
-              {[
-                { title: "Fast Delivery", desc: "24-hour turnaround for standard orders and same-day express options.", icon: <Zap size={28} /> },
-                { title: "Affordable Pricing", desc: "Transparent, competitive rates without compromising on premium quality.", icon: <Tag size={28} /> },
-                { title: "Professional Handling", desc: "Every garment is inspected by experts and treated with specialized care.", icon: <ShieldCheck size={28} /> },
-                { title: "Trusted by Hotels", desc: "Proven reliability serving elite hospitality chains and boutiques.", icon: <Award size={28} /> }
-              ].map((benefit, index) => (
-                <div key={index} className="benefit-item scroll-reveal" style={{ 
-                  transitionDelay: `${(index * 0.1) + 0.2}s`,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  textAlign: 'center',
-                  padding: '2rem',
-                  background: 'rgba(255,255,255,0.02)',
-                  borderRadius: '24px',
-                  border: '1px solid rgba(91,62,132,0.1)'
-                }}>
-                  <div className="benefit-icon-container" style={{ color: 'var(--color-primary)', background: 'rgba(91,62,132,0.1)', padding: '1rem', borderRadius: '16px', marginBottom: '1.25rem' }}>{benefit.icon}</div>
-                  <h3 className="benefit-title" style={{ fontWeight: 800, fontSize: '1.3rem', marginBottom: '0.75rem' }}>{benefit.title}</h3>
-                  <p className="benefit-description" style={{ color: 'var(--color-text-dim)', lineHeight: 1.6 }}>{benefit.desc}</p>
-                </div>
-              ))}
-            </div>
 
-            <div className="flex-center scroll-reveal" style={{ marginTop: '3.5rem', transitionDelay: '0.6s' }}>
-              <button className="btn btn-primary" onClick={() => handleAction(true)} style={{ padding: '1rem 2.5rem', fontSize: '1.1rem', fontWeight: 700 }}>
-                Get Started
-              </button>
-            </div>
-          </section>
+          <SubscriptionPlans
+            subscriptions={subscriptions}
+            services={services}
+            setSelectedPlan={setSelectedPlan}
+            setCart={setCart}
+            setSelectionQuantities={setSelectionQuantities}
+            setSelectedServices={setSelectedServices}
+            setActiveServiceId={setActiveServiceId}
+            handleAction={handleAction}
+            setOrderStep={setOrderStep}
+            applyPlanCoverageToCartItem={applyPlanCoverageToCartItem}
+            createSubscriptionPlanItem={createSubscriptionPlanItem}
+            normalizeServiceValue={normalizeServiceValue}
+            SCHEDULE_STORAGE={SCHEDULE_STORAGE}
+          />
 
-          {/* Subscription Plans Section */}
-          {(() => {
-            const allPlans = [
-              {
-                name: "Wash & Fold",
-                price: "1999",
-                weight: "25kg",
-                service: "Wash and dry",
-                features: ["Eco-friendly Wash", "Careful Folding", "Free Pickup & Delivery"]
-              },
-              {
-                name: "Wash & Iron",
-                price: "2499",
-                weight: "25kg",
-                service: "Wash and iron",
-                features: ["Eco-friendly Wash", "Steam Ironing", "Free Pickup & Delivery"]
-              }
-            ];
 
-            // Only show plans that haven't been subscribed to yet (and are not exhausted)
-            const availablePlans = allPlans.filter(plan => 
-              !subscriptions.some(sub => 
-                (sub.service === plan.service || sub.plan === plan.name) && 
-                sub.status === 'Active' && 
-                sub.used < sub.totalLimit
-              )
-            );
+          <HowItWorks
+            worksRef={worksRef}
+            activeWorksStep={activeWorksStep}
+            worksScrollProgress={worksScrollProgress}
+          />
 
-            if (availablePlans.length === 0) return null;
-
-            return (
-              <>
-                {/* Section Divider */}
-                <div className="section-divider" style={{ padding: 'var(--space-lg) 0' }}>
-                  <div className="container">
-                    <hr style={{ border: 'none', borderTop: '1px solid rgba(91, 62, 132, 0.15)', margin: '0 auto', width: '85%' }} />
-                  </div>
-                </div>
-
-                <section className="section" id="subscriptions" style={{ background: 'var(--color-bg)', paddingTop: 0, paddingBottom: 0 }}>
-                  <div className="container" id="subscription-plans">
-                    <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-                      <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, marginBottom: '1rem' }}>Subscription Plans</h2>
-                      <p style={{ color: 'var(--color-text-dim)', fontSize: '1.2rem' }}>Premium care for your regular laundry needs</p>
-                    </div>
-
-                    <div className="services-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
-                      {availablePlans.map((plan, i) => (
-                        <div key={plan.name} className="service-card" style={{
-                          padding: '2.5rem',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: '1.5rem',
-                          textAlign: 'center',
-                          background: i === 1 ? 'linear-gradient(135deg, rgba(91,62,132,0.1) 0%, rgba(91,62,132,0.05) 100%)' : 'rgba(255,255,255,0.03)',
-                          border: i === 1 ? '1px solid var(--color-primary)' : '1px solid #5b3e84',
-                        }}>
-                          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>{plan.name}</div>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.2rem' }}>
-                            <span style={{ fontSize: '2.5rem', fontWeight: 900 }}>Rs. {plan.price}</span>
-                            <span style={{ color: 'var(--color-text-dim)' }}>/month</span>
-                          </div>
-                          <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>Up to {plan.weight} included</div>
-                          <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
-                          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.8rem', textAlign: 'left', width: '100%' }}>
-                            {plan.features.map((f, fi) => (
-                              <li key={fi} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.95rem' }}>
-                                <CheckCircle size={18} color="var(--color-primary)" /> {f}
-                              </li>
-                            ))}
-                            <li style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.95rem' }}>
-                              <CheckCircle size={18} color="var(--color-primary)" /> Applies to: {plan.service}
-                            </li>
-                          </ul>
-                          <button
-                            className="btn btn-primary"
-                            style={{ width: '100%', marginTop: 'auto', padding: '1rem' }}
-                            onClick={() => {
-                              const planServiceName = plan.name === 'Wash & Fold' ? 'Wash and dry' : plan.service;
-                              const s = services.find(gs => normalizeServiceValue(gs.name) === normalizeServiceValue(planServiceName));
-                              const nextSelectedPlan = { 
-                                name: plan.name, 
-                                service: planServiceName,
-                                price: Number(plan.price),
-                                totalLimit: parseInt(plan.weight),
-                                used: 0
-                              };
-                              const planCartItem = createSubscriptionPlanItem(nextSelectedPlan);
-                              const existingSubscriptionCart = JSON.parse(localStorage.getItem(SCHEDULE_STORAGE.subscription.cart)) || [];
-                              const preservedLaundryItems = existingSubscriptionCart.filter(item => !item.isPlanItem);
-                              const nextSubscriptionCart = [
-                                planCartItem,
-                                ...preservedLaundryItems.map(item => applyPlanCoverageToCartItem(item, nextSelectedPlan))
-                              ];
-
-                              setSelectedPlan(nextSelectedPlan);
-                              setCart(nextSubscriptionCart);
-                              setSelectionQuantities({});
-                              localStorage.setItem(SCHEDULE_STORAGE.subscription.cart, JSON.stringify(nextSubscriptionCart));
-                              localStorage.setItem(SCHEDULE_STORAGE.subscription.orderStep, '1');
-                              localStorage.setItem(SCHEDULE_STORAGE.subscription.selectionQuantities, JSON.stringify({}));
-                              localStorage.setItem(SCHEDULE_STORAGE.subscription.selectedPlan, JSON.stringify(nextSelectedPlan));
-                              if (s) {
-                                setSelectedServices([s]);
-                                setActiveServiceId(s._id);
-                                localStorage.setItem(SCHEDULE_STORAGE.subscription.selectedServiceIds, JSON.stringify([s._id]));
-                                handleAction(false, true, '/schedule-subscription');
-                                setOrderStep(1);
-                              } else {
-                                localStorage.removeItem(SCHEDULE_STORAGE.subscription.selectedServiceIds);
-                                handleAction(false, true, '/schedule-subscription');
-                              }
-                            }}
-                          >
-                            Choose Plan
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </section>
-
-                {/* Section Divider */}
-                <div className="section-divider" style={{ padding: 'var(--space-lg) 0' }}>
-                  <div className="container">
-                    <hr style={{ border: 'none', borderTop: '1px solid rgba(91, 62, 132, 0.15)', margin: '0 auto', width: '85%' }} />
-                  </div>
-                </div>
-              </>
-            );
-          })()}
-
-          {/* How It Works Section */}
-          <section className="works-scroll-container" ref={worksRef} style={{ paddingTop: 0 }}>
-            <div className="works-sticky-wrapper">
-              <div className="container" style={{ width: '100%' }}>
-                <div style={{ textAlign: 'center', marginBottom: 'var(--space-lg)' }}>
-                  <h2 style={{ marginBottom: '0.5rem' }}>How It Works</h2>
-                  <p style={{ margin: '0 auto' }}>Laundry in 5 Simple Steps</p>
-                </div>
-
-                <div className="works-grid">
-                  <div className="timeline-container">
-                    {[
-                      { title: "Order Placed", desc: "Place your order easily through our website", icon: <CheckCircle size={24} strokeWidth={1.5} /> },
-                      { title: "Laundry Pickup", desc: "We collect your clothes from your doorstep", icon: <MapPin size={24} strokeWidth={1.5} /> },
-                      { title: "Processing", desc: "Clothes are washed, dried, and ironed", icon: <Waves size={24} strokeWidth={1.5} /> },
-                      { title: "Delivery", desc: "Fresh clothes delivered back to you", icon: <Shirt size={24} strokeWidth={1.5} /> },
-                      { title: "Payment", desc: "Pay easily after delivery", icon: <Tag size={24} strokeWidth={1.5} /> }
-                    ].map((step, index, arr) => {
-                      const isActive = activeWorksStep === index;
-                      const isPast = activeWorksStep > index;
-
-                      return (
-                        <div key={index} className={`timeline-item ${isActive ? 'active' : ''} ${isPast ? 'past' : ''}`}>
-                          <div className="timeline-left">
-                            <div className={`timeline-dot ${isActive || isPast ? 'active' : ''}`}>
-                              {step.icon}
-                            </div>
-                            {index !== arr.length - 1 && (
-                              <div className="timeline-line-wrapper">
-                                <div className="timeline-line-progress" style={{ height: isPast ? '100%' : '0%' }}></div>
-                              </div>
-                            )}
-                          </div>
-                          <div className="timeline-content">
-                            <h3 className="timeline-title">{step.title}</h3>
-                            <p className="timeline-desc">{step.desc}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="works-image-col">
-                    {[
-                      "https://images.unsplash.com/photo-1512428559087-560fa5ceab42?auto=format&fit=crop&q=80&w=1000",
-                      "https://images.unsplash.com/photo-1582735689369-0eb66e6bc527?auto=format&fit=crop&q=80&w=1000",
-                      "https://images.unsplash.com/photo-1545173168-9f1947eebb7f?auto=format&fit=crop&q=80&w=1000",
-                      "https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?auto=format&fit=crop&q=80&w=1000",
-                      "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=1000"
-                    ].map((src, idx) => (
-                      <div key={idx} className={`works-image-wrapper ${activeWorksStep === idx ? 'active' : ''}`}>
-                        <img
-                          src={src}
-                          alt={`Step ${idx + 1}`}
-                          style={{ transform: `translateY(${(worksScrollProgress - 0.5) * -12}%)` }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
 
           {/* Section Divider */}
           {/* <div className="section-divider" style={{ padding: 'var(--space-lg) 0' }}>
@@ -2141,9 +1756,9 @@ function App() {
 
             <div className="footer-contact-col">
               <h4>Contact</h4>
-              <p>+91 98765 43210</p>
-              <p>concierge@subratha.com</p>
-              <p>Premium Laundry Lab, Indiranagar, Bangalore</p>
+              <p>+91 90001 99811</p>
+              <p>hello@subratha.com</p>
+              <p>53-16-82/24, Maddilapalem, near Shivalayam street, near venkateshwara Apartments, Visakhapatnam - 530013.</p>
             </div>
           </div>
           <div className="container">
@@ -2158,71 +1773,15 @@ function App() {
         </footer>
       )}
 
-      {/* Auth Modal */}
-      {showAuthModal && (
-        <div className="modal-overlay" onClick={() => setShowAuthModal(false)}>
-          <div
-            className="modal-content"
-            onClick={(e) => e.stopPropagation()}
-            style={{ textAlign: 'center' }}
-          >
-            <button className="modal-close" onClick={() => setShowAuthModal(false)}>
-              <X />
-            </button>
-            <div style={{ marginBottom: 'var(--space-md)' }}>
-              <h2 style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>
-                {isSignup ? 'Create Account' : 'Experience Premium'}
-              </h2>
-              <p style={{ fontSize: '1rem' }}>
-                {isSignup ? 'Sign up for elite wardrobe care.' : 'Log in to Subratha for elite care.'}
-              </p>
-            </div>
+      <AuthModal
+        showAuthModal={showAuthModal}
+        setShowAuthModal={setShowAuthModal}
+        isSignup={isSignup}
+        setIsSignup={setIsSignup}
+        handleAuth={handleAuth}
+        handleGoogleLogin={handleGoogleLogin}
+      />
 
-            <div className="auth-form">
-              <button className="google-btn" onClick={handleGoogleLogin}>
-                <svg width="20" height="20" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                </svg>
-                {isSignup ? 'Sign up with Google' : 'Continue with Google'}
-              </button>
-
-              <div className="divider">or use email</div>
-
-              <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-                {isSignup && (
-                  <div className="input-group" style={{ textAlign: 'left' }}>
-                    <input type="text" className="input-field" placeholder="Full Name" required />
-                  </div>
-                )}
-                <div className="input-group" style={{ textAlign: 'left' }}>
-                  <input type="email" className="input-field" placeholder="Email address" required />
-                </div>
-                <div className="input-group" style={{ textAlign: 'left' }}>
-                  <input type="password" className="input-field" placeholder="Password" required />
-                </div>
-                <button type="submit" className="btn btn-primary" style={{ width: '100%', borderRadius: 'var(--radius-md)', marginTop: '0.5rem' }}>
-                  {isSignup ? 'Create Account' : 'Sign In'}
-                </button>
-              </form>
-            </div>
-
-            <p style={{ fontSize: '0.85rem', marginTop: 'var(--space-md)' }}>
-              {isSignup ? 'Already have an account? ' : "Don't have an account? "}
-              <a
-                href="#"
-                onClick={(e) => { e.preventDefault(); setIsSignup(!isSignup); }}
-                style={{ color: 'var(--color-primary)', fontWeight: '600' }}
-              >
-                {isSignup ? 'Sign In' : 'Create one'}
-              </a>
-            </p>
-
-          </div>
-        </div>
-      )}
       <a
         href="https://wa.me/919000199811"
         className="whatsapp-float"
@@ -2257,6 +1816,9 @@ function App() {
       </>
         } />
       </Routes>
+
+      </Suspense>
+
     </>
   );
 }

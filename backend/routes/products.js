@@ -27,10 +27,19 @@ const isAdmin = (req, res, next) => {
   }
 };
 
+let productCache = null;
+let lastCacheUpdate = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 // Public: Get all products
 router.get('/', async (req, res) => {
   try {
+    if (productCache && (Date.now() - lastCacheUpdate < CACHE_DURATION)) {
+      return res.json(productCache);
+    }
     const products = await Product.find().sort({ category: 1, name: 1 });
+    productCache = products;
+    lastCacheUpdate = Date.now();
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching products' });
@@ -42,6 +51,7 @@ router.post('/', protect, isAdmin, async (req, res) => {
   try {
     const { name, category, services, imageUrl } = req.body;
     const product = await Product.create({ name, category, services, imageUrl });
+    productCache = null; // Invalidate cache
     res.status(201).json(product);
   } catch (error) {
     res.status(500).json({ message: 'Error creating product' });
@@ -52,6 +62,7 @@ router.post('/', protect, isAdmin, async (req, res) => {
 router.put('/:id', protect, isAdmin, async (req, res) => {
   try {
     const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    productCache = null; // Invalidate cache
     res.json(product);
   } catch (error) {
     res.status(500).json({ message: 'Error updating product' });
@@ -62,10 +73,12 @@ router.put('/:id', protect, isAdmin, async (req, res) => {
 router.delete('/:id', protect, isAdmin, async (req, res) => {
   try {
     await Product.findByIdAndDelete(req.params.id);
+    productCache = null; // Invalidate cache
     res.json({ message: 'Product deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting product' });
   }
 });
+
 
 export default router;

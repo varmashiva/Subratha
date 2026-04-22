@@ -245,7 +245,7 @@ export default function HotelDashboard({ onLogout }) {
                   <p><strong>Hotel Partner:</strong> Taj Premium</p>
                   <p><strong>Contract Tier:</strong> Enterprise Clean</p>
                   <p><strong>SLA:</strong> 12 Hour Turnaround</p>
-                  <p><strong>Account Manager:</strong> concierge@subratha.com</p>
+                  <p><strong>Account Manager:</strong> hello@subratha.com</p>
                 </div>
               </div>
             </div>
