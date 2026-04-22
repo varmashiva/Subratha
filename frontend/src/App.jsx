@@ -689,9 +689,6 @@ function App() {
 
         <Route path="/schedule" element={
         <main className="container order-container fade-in">
-          <div className="mobile-only-brand" style={{ textAlign: 'center', marginBottom: '2rem', display: 'none' }}>
-            <span className="navbar-brand">Subratha</span>
-          </div>
           <h2 style={{ textAlign: 'center', marginBottom: 'var(--space-lg)', fontSize: 'clamp(1.5rem, 5vw, 2.25rem)' }}>Schedule Premium Service</h2>
 
           <div className="stepper-container">
@@ -745,8 +742,8 @@ function App() {
               };
 
               const renderServiceChips = () => (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', justifyContent: 'center' }}>
                     {services.map(svc => {
                       const isSelected = selectedServices.some(s => s._id === svc._id);
                       const isActive = activeServiceId === svc._id;
@@ -757,18 +754,19 @@ function App() {
                           key={svc._id}
                           onClick={() => handleChipClick(svc)}
                           style={{
-                            padding: '0.6rem 1.25rem', borderRadius: '100px', border: '1px solid',
+                            padding: '0.4rem 0.85rem', borderRadius: '100px', border: '1px solid',
                             borderColor: isActive ? 'var(--color-primary)' : isCovered ? 'rgba(91,62,132,0.4)' : isSelected ? 'rgba(91,62,132,0.4)' : 'rgba(91,62,132,0.15)',
                             background: isActive ? 'var(--color-primary)' : isCovered ? 'rgba(91,62,132,0.08)' : isSelected ? 'rgba(91,62,132,0.1)' : 'rgba(255,255,255,0.05)',
                             color: isActive ? '#fff' : 'var(--color-primary)',
                             cursor: 'pointer',
-                            fontWeight: 700, fontSize: '0.9rem', transition: 'all 0.2s',
-                            boxShadow: isCovered ? '0 4px 12px rgba(91,62,132,0.08)' : isActive ? '0 4px 12px rgba(91,62,132,0.2)' : 'none',
+                            fontWeight: 700, fontSize: '0.75rem', transition: 'all 0.2s',
+                            boxShadow: isCovered ? '0 4px 10px rgba(91,62,132,0.06)' : isActive ? '0 4px 10px rgba(91,62,132,0.15)' : 'none',
                             position: 'relative',
-                            display: 'flex', alignItems: 'center', gap: '0.4rem',
+                            display: 'flex', alignItems: 'center', gap: '0.3rem',
+                            whiteSpace: 'nowrap'
                           }}
                         >
-                          {isCovered && <Zap size={14} fill={isActive ? '#fff' : 'var(--color-primary)'} color="var(--color-primary)" />}
+                          {isCovered && <Zap size={11} fill={isActive ? '#fff' : 'var(--color-primary)'} color="var(--color-primary)" />}
                           {svc.name}
                         </button>
                       );
@@ -787,47 +785,47 @@ function App() {
                   <div className="fade-in" style={{ 
                     background: (isCovered && !isLimitExceeded) ? 'linear-gradient(135deg, rgba(91,62,132,0.1) 0%, rgba(91,62,132,0.05) 100%)' : 'linear-gradient(135deg, rgba(91,62,132,0.08) 0%, rgba(91,62,132,0.03) 100%)', 
                     borderRadius: '20px', 
-                    padding: '2.5rem', 
+                    padding: 'clamp(1rem, 4vw, 2.5rem)', 
                     border: `1px solid ${(isCovered && !isLimitExceeded) ? 'rgba(91,62,132,0.3)' : 'rgba(91,62,132,0.1)'}`,
                     position: 'relative',
                     overflow: 'hidden',
                     boxShadow: (isCovered && !isLimitExceeded) ? '0 15px 35px -10px rgba(91,62,132,0.15)' : 'none'
                   }}>
                     {isCovered && !isLimitExceeded ? (
-                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: 'linear-gradient(90deg, #5b3e84, #7c5cb5)', color: 'white', padding: '0.6rem 1.25rem', fontSize: '0.75rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.6rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                        <Zap size={14} fill="white" /> COVERED UNDER YOUR SUBSCRIPTION · REMAINING: {remaining} KG · TOTAL: ₹0
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: 'linear-gradient(90deg, #5b3e84, #7c5cb5)', color: 'white', padding: '0.6rem 1rem', fontSize: '0.65rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.5rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                        <Zap size={12} fill="white" /> SUBSCRIPTION COVERED · {remaining}KG REMAINING
                       </div>
                     ) : isLimitExceeded ? (
-                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: '#d97706', color: 'white', padding: '0.6rem 1.25rem', fontSize: '0.75rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.6rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                        <AlertCircle size={14} /> SUBSCRIPTION LIMIT EXCEEDED · NORMAL PRICING APPLIES
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: '#d97706', color: 'white', padding: '0.6rem 1rem', fontSize: '0.65rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.5rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                        <AlertCircle size={12} /> LIMIT EXCEEDED · NORMAL PRICING
                       </div>
                     ) : (
-                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: 'rgba(91,62,132,0.08)', color: 'var(--color-primary)', opacity: 0.8, padding: '0.6rem 1.25rem', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.6rem', textTransform: 'uppercase' }}>
-                        <AlertCircle size={14} /> NOT INCLUDED IN YOUR SUBSCRIPTION · NORMAL PRICING APPLIES
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: 'rgba(91,62,132,0.08)', color: 'var(--color-primary)', padding: '0.6rem 1rem', fontSize: '0.65rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.5rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                        <AlertCircle size={12} /> NOT INCLUDED · NORMAL PRICING
                       </div>
                     )}
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem', marginTop: '1.75rem' }}>
-                      <div>
-                        <div style={{ fontSize: '0.85rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 800, marginBottom: '0.5rem' }}>Selected Service</div>
-                        <div style={{ fontWeight: 900, fontSize: '2rem', color: 'var(--color-primary)' }}>{activeService.name}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem', marginTop: '2rem' }}>
+                      <div style={{ flex: '1 1 120px' }}>
+                        <div style={{ fontSize: '0.7rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800, marginBottom: '0.15rem' }}>Service</div>
+                        <div style={{ fontWeight: 900, fontSize: 'clamp(1.25rem, 4.5vw, 1.75rem)', color: 'var(--color-primary)' }}>{activeService.name}</div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.85rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 800, marginBottom: '0.5rem' }}>Estimation Rate</div>
-                        <div style={{ fontWeight: 900, fontSize: '2rem', color: 'var(--color-primary)' }}>
-                          {(isCovered && !isLimitExceeded) ? 'Rs. 0 (Included)' : `Rs. ${activeService.basePrice} / kg`}
+                      <div style={{ flex: '1 1 120px', textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.7rem', color: '#b6a3ce', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800, marginBottom: '0.15rem' }}>Rate</div>
+                        <div style={{ fontWeight: 900, fontSize: 'clamp(1.25rem, 4.5vw, 1.75rem)', color: 'var(--color-primary)' }}>
+                          {(isCovered && !isLimitExceeded) ? '₹0' : `₹${activeService.basePrice}/kg`}
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', color: 'var(--color-text)', fontSize: '1.05rem', fontWeight: 600 }}>
-                        <CheckCircle size={20} color="var(--color-primary)" />
-                        <span>Final weight will be measured at pickup</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: 'var(--color-text)', fontSize: '0.95rem', fontWeight: 600 }}>
+                        <CheckCircle size={18} color="var(--color-primary)" />
+                        <span>Weight measured at pickup</span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', color: 'var(--color-text)', fontSize: '1.05rem', fontWeight: 600 }}>
-                        <CheckCircle size={20} color={(isCovered && !isLimitExceeded) ? 'var(--color-primary)' : 'var(--color-primary)'} />
-                        <span>Exact price will be updated after inspection</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: 'var(--color-text)', fontSize: '0.95rem', fontWeight: 600 }}>
+                        <CheckCircle size={18} color="var(--color-primary)" />
+                        <span>Exact price after inspection</span>
                       </div>
                     </div>
 
@@ -835,18 +833,18 @@ function App() {
                       className="btn btn-primary"
                       disabled={cart.some(item => item.service === activeService.name)}
                       style={{ 
-                        width: '100%', marginTop: '2rem', padding: '1rem', 
+                        width: '100%', marginTop: '1.5rem', padding: '0.85rem', 
                         background: (isCovered && !isLimitExceeded) ? 'linear-gradient(90deg, #5b3e84, #7c5cb5)' : 'var(--color-primary)',
                         opacity: cart.some(item => item.service === activeService.name) ? 0.6 : 1,
                         cursor: cart.some(item => item.service === activeService.name) ? 'not-allowed' : 'pointer',
-                        border: 'none', boxShadow: (isCovered && !isLimitExceeded) ? '0 10px 25px -5px rgba(91,62,132,0.3)' : '0 10px 25px -5px rgba(91,62,132,0.2)'
+                        borderRadius: '12px'
                       }}
                       onClick={() => {
                         const newItem = {
                           id: Date.now(),
                           product: activeService.name,
                           service: activeService.name,
-                          quantity: 0, // Weight determined at pickup
+                          quantity: 0,
                           unit: 'kg',
                           price: (isCovered && !isLimitExceeded) ? 0 : activeService.basePrice,
                           total: 0,
@@ -980,8 +978,14 @@ function App() {
                               <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{Object.keys(selectionQuantities).length} Items Selected</div>
                               <div style={{ fontSize: '0.85rem', opacity: 0.85 }}>{activeService.name} · {(isCovered && !isLimitExceeded) ? 'Covered under subscription' : isLimitExceeded ? 'Limit exceeded · Normal pricing applies' : "Click '+' to add to bag"}</div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                              <div style={{ fontWeight: 900, fontSize: '1.5rem' }}>
+                            <div style={{
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '1rem', 
+                              marginTop: window.innerWidth < 480 ? '1rem' : '0',
+                              flexWrap: 'wrap'
+                            }}>
+                              <div style={{ fontWeight: 900, fontSize: 'clamp(1.2rem, 4vw, 1.5rem)' }}>
                                 {(isCovered && !isLimitExceeded) ? '₹0 (Covered)' : (() => {
                                   const total = Object.entries(selectionQuantities).reduce((acc, [id, qty]) => {
                                     const p = activeServiceProducts.find(prod => prod._id === id);
@@ -992,7 +996,13 @@ function App() {
                               </div>
                               <button
                                 className="btn btn-secondary"
-                                style={{ padding: '0.6rem 1.5rem', background: '#fff', color: (isCovered && !isLimitExceeded) ? '#16a34a' : 'var(--color-primary)', fontWeight: 800 }}
+                                style={{ 
+                                  padding: '0.6rem 1.5rem', 
+                                  background: '#fff', 
+                                  color: (isCovered && !isLimitExceeded) ? '#16a34a' : 'var(--color-primary)', 
+                                  fontWeight: 800,
+                                  width: window.innerWidth < 480 ? '100%' : 'auto'
+                                }}
                                 onClick={() => {
                                   const newItems = Object.entries(selectionQuantities).map(([id, qty]) => {
                                     const prod = activeServiceProducts.find(p => p._id === id);
@@ -1211,9 +1221,6 @@ function App() {
 
         <Route path="/schedule-subscription" element={
         <main className="container order-container fade-in">
-          <div className="mobile-only-brand" style={{ textAlign: 'center', marginBottom: '2rem', display: 'none' }}>
-            <span className="navbar-brand">Subratha</span>
-          </div>
           <h2 style={{ textAlign: 'center', marginBottom: 'var(--space-lg)', fontSize: 'clamp(1.5rem, 5vw, 2.25rem)' }}>Schedule Premium Service</h2>
 
           <div className="stepper-container">
@@ -1267,8 +1274,8 @@ function App() {
               };
 
               const renderServiceChips = () => (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', justifyContent: 'center' }}>
                     {services.map(svc => {
                       const isSelected = selectedServices.some(s => s._id === svc._id);
                       const isActive = activeServiceId === svc._id;
@@ -1279,18 +1286,19 @@ function App() {
                           key={svc._id}
                           onClick={() => handleChipClick(svc)}
                           style={{
-                            padding: '0.6rem 1.25rem', borderRadius: '100px', border: '1px solid',
+                            padding: '0.4rem 0.85rem', borderRadius: '100px', border: '1px solid',
                             borderColor: isActive ? 'var(--color-primary)' : isCovered ? 'rgba(91,62,132,0.4)' : isSelected ? 'rgba(91,62,132,0.4)' : 'rgba(91,62,132,0.15)',
                             background: isActive ? 'var(--color-primary)' : isCovered ? 'rgba(91,62,132,0.08)' : isSelected ? 'rgba(91,62,132,0.1)' : 'rgba(255,255,255,0.05)',
                             color: isActive ? '#fff' : 'var(--color-primary)',
                             cursor: 'pointer',
-                            fontWeight: 700, fontSize: '0.9rem', transition: 'all 0.2s',
-                            boxShadow: isCovered ? '0 4px 12px rgba(91,62,132,0.08)' : isActive ? '0 4px 12px rgba(91,62,132,0.2)' : 'none',
+                            fontWeight: 700, fontSize: '0.75rem', transition: 'all 0.2s',
+                            boxShadow: isCovered ? '0 4px 10px rgba(91,62,132,0.06)' : isActive ? '0 4px 10px rgba(91,62,132,0.15)' : 'none',
                             position: 'relative',
-                            display: 'flex', alignItems: 'center', gap: '0.4rem',
+                            display: 'flex', alignItems: 'center', gap: '0.3rem',
+                            whiteSpace: 'nowrap'
                           }}
                         >
-                          {isCovered && <Zap size={14} fill={isActive ? '#fff' : 'var(--color-primary)'} color="var(--color-primary)" />}
+                          {isCovered && <Zap size={11} fill={isActive ? '#fff' : 'var(--color-primary)'} color="var(--color-primary)" />}
                           {svc.name}
                         </button>
                       );

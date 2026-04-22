@@ -1263,7 +1263,7 @@ p {
   max-width: 800px;
   margin: 0 auto;
   min-height: 60vh;
-  padding: var(--space-xl) 0;
+  padding: clamp(1rem, 5vw, var(--space-xl)) clamp(1rem, 3vw, 2rem);
 }
 
 .stepper-container {
@@ -1271,8 +1271,8 @@ p {
   justify-content: space-between;
   align-items: center;
   position: relative;
-  margin-bottom: var(--space-xl);
-  padding: 0 var(--space-sm);
+  margin-bottom: clamp(2rem, 8vw, var(--space-xl));
+  padding: 0;
 }
 
 .stepper-line {
@@ -1334,12 +1334,24 @@ p {
 }
 
 .step-label {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: var(--color-secondary);
-  font-weight: 500;
+  font-weight: 600;
   position: absolute;
-  top: 45px;
+  top: 48px;
   white-space: nowrap;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 480px) {
+  .step-label {
+    display: none;
+  }
+  .step-item.active .step-label {
+    display: block;
+    top: 52px;
+  }
 }
 
 .step-item.active .step-label,
@@ -1351,7 +1363,7 @@ p {
   background: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: var(--space-lg);
+  padding: clamp(1rem, 4vw, var(--space-lg));
   animation: fadeIn 0.4s ease-out;
 }
 
@@ -1399,6 +1411,47 @@ p {
   margin-top: var(--space-lg);
   padding-top: var(--space-md);
   border-top: 1px solid var(--color-border);
+  gap: 1rem;
+}
+
+@media (max-width: 480px) {
+  .order-actions {
+    flex-direction: column-reverse; /* Put Back button below Next */
+  }
+  .order-actions button {
+    width: 100%;
+    padding: 1rem;
+  }
+}
+
+/* Bag / Cart Table Mobile Fix */
+@media (max-width: 600px) {
+  .order-step-content table thead {
+    display: none;
+  }
+  .order-step-content table, 
+  .order-step-content tbody, 
+  .order-step-content tr, 
+  .order-step-content td {
+    display: block;
+    width: 100%;
+  }
+  .order-step-content tr {
+    border-bottom: 1px solid rgba(91,62,132,0.1);
+    padding: 1.25rem 0;
+    position: relative;
+  }
+  .order-step-content td {
+    text-align: left !important;
+    padding: 0.25rem 0;
+    border: none !important;
+  }
+  .order-step-content td:last-child {
+    position: absolute;
+    top: 1.25rem;
+    right: 0;
+    width: auto;
+  }
 }
 
 .summary-details {
