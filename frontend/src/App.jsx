@@ -75,18 +75,24 @@ function App() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
-  const [orderStep, setOrderStep] = useState(() => Number(localStorage.getItem(SCHEDULE_STORAGE.pickup.orderStep)) || 1);
+  const [orderStep, setOrderStep] = useState(() => Number(localStorage.getItem(activeScheduleStorage.orderStep)) || 1);
   const [products, setProducts] = useState([]);
   const [services, setServices] = useState([]);
-  const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem(SCHEDULE_STORAGE.pickup.cart)) || []);
+  const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem(activeScheduleStorage.cart)) || []);
   const [selectedProduct, setSelectedProduct] = useState(null); // Keep for backwards compatibility if needed, but we'll use selectionQuantities for multi-select
-  const [selectionQuantities, setSelectionQuantities] = useState(() => JSON.parse(localStorage.getItem(SCHEDULE_STORAGE.pickup.selectionQuantities)) || {});
+  const [selectionQuantities, setSelectionQuantities] = useState(() => JSON.parse(localStorage.getItem(activeScheduleStorage.selectionQuantities)) || {});
   const [selectedServices, setSelectedServices] = useState([]);
   const [activeServiceId, setActiveServiceId] = useState(null);
   const [showSubConflictWarning, setShowSubConflictWarning] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  const [orderDetails, setOrderDetails] = useState(() => JSON.parse(localStorage.getItem(SCHEDULE_STORAGE.pickup.orderDetails)) || { address: '', time: '', service: '' });
-  const [selectedPlan, setSelectedPlan] = useState(() => JSON.parse(localStorage.getItem('selectedPlan')) || null);
+  const [orderDetails, setOrderDetails] = useState(() => JSON.parse(localStorage.getItem(activeScheduleStorage.orderDetails)) || { address: '', time: '', service: '' });
+  const [selectedPlan, setSelectedPlan] = useState(() => {
+    if (isSubscriptionSchedule) {
+      return JSON.parse(localStorage.getItem(activeScheduleStorage.selectedPlan)) || JSON.parse(localStorage.getItem('selectedPlan')) || null;
+    }
+    return JSON.parse(localStorage.getItem('selectedPlan')) || null;
+  });
+  const [hasHydratedSchedule, setHasHydratedSchedule] = useState(!isScheduleRoute);
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -100,7 +106,7 @@ function App() {
       
       // Re-hydrate selectedServices from draftOrder (if logged in) or localStorage
       let savedServiceIds = [];
-      if (user?.draftOrder?.selectedServiceIds) {
+      if (!isSubscriptionSchedule && user?.draftOrder?.selectedServiceIds) {
         savedServiceIds = user.draftOrder.selectedServiceIds;
       } else {
         savedServiceIds = JSON.parse(localStorage.getItem(activeScheduleStorage.selectedServiceIds)) || [];
@@ -138,7 +144,7 @@ function App() {
         fetchActiveSubscription();
         
         // Re-hydrate from MongoDB draft order if it exists
-        if (data.user.draftOrder) {
+        if (!isSubscriptionSchedule && data.user.draftOrder) {
           const { cart: dbCart, selectionQuantities: dbQty, selectedServiceIds: dbIds, orderStep: dbStep, orderDetails: dbDetails } = data.user.draftOrder;
           if (dbCart) setCart(dbCart);
           if (dbQty) setSelectionQuantities(dbQty);
@@ -260,6 +266,90 @@ function App() {
     }, existingCart);
   };
 
+  const normalizeServiceValue = (value) => {
+    const compact = value?.toLowerCase().replace(/[^a-z]/g, '') || '';
+
+    if ((compact.includes('wash') && (compact.includes('fold') || compact.includes('dry'))) || compact === 'washfold') {
+      return 'washdry';
+    }
+
+    if (compact.includes('wash') && (compact.includes('iron') || compact.includes('ironing'))) {
+      return 'washiron';
+    }
+
+    return compact.replace('and', '').replace('ironing', 'iron');
+  };
+
+  const getCartItemStandardPrice = (item) => {
+    const matchingService = services.find(
+      (service) => normalizeServiceValue(service.name) === normalizeServiceValue(item.service)
+    );
+
+    if (item.unit === 'kg' || matchingService?.type === 'Global') {
+      return Number(matchingService?.basePrice ?? item.price ?? 0);
+    }
+
+    const matchingProduct = products.find((product) => product.name === item.product);
+    const productService = matchingProduct?.services?.find(
+      (service) => normalizeServiceValue(service.name) === normalizeServiceValue(item.service)
+    );
+
+    return Number(productService?.price ?? item.price ?? 0);
+  };
+
+  const applyPlanCoverageToCartItem = (item, plan) => {
+    if (!plan || item.isPlanItem || item.unit === 'plan') return item;
+
+    const isCoveredByPlan = normalizeServiceValue(item.service) === normalizeServiceValue(plan.service);
+    if (!isCoveredByPlan) {
+      const standardPrice = getCartItemStandardPrice(item);
+      return {
+        ...item,
+        price: standardPrice,
+        total: item.unit === 'kg' ? 0 : standardPrice * (item.quantity || 0),
+        subscriptionApplied: false,
+      };
+    }
+
+    return {
+      ...item,
+      price: 0,
+      total: 0,
+      subscriptionApplied: true,
+    };
+  };
+
+  const getMatchingCoverage = (serviceName) => {
+    if (!serviceName) return null;
+
+    const target = normalizeServiceValue(serviceName);
+    const activeSubscription = subscriptions.find(
+      (sub) =>
+        sub.status === 'Active' &&
+        (normalizeServiceValue(sub.service) === target || normalizeServiceValue(sub.plan) === target)
+    );
+
+    if (activeSubscription) return activeSubscription;
+
+    if (selectedPlan && normalizeServiceValue(selectedPlan.service) === target) {
+      return { ...selectedPlan, isTemporary: true };
+    }
+
+    return null;
+  };
+
+  const createSubscriptionPlanItem = (plan) => ({
+    id: `subscription-plan-${Date.now()}`,
+    product: `${plan.name} Subscription`,
+    service: plan.service,
+    quantity: 1,
+    unit: 'plan',
+    price: Number(plan.price) || 0,
+    total: Number(plan.price) || 0,
+    subscriptionApplied: false,
+    isPlanItem: true,
+  });
+
   const handleOrderSubmit = async () => {
     setIsLoading(true);
     try {
@@ -347,7 +437,12 @@ function App() {
   }, []);
 
   React.useEffect(() => {
-    if (!isScheduleRoute) return;
+    if (!isScheduleRoute) {
+      setHasHydratedSchedule(true);
+      return;
+    }
+
+    setHasHydratedSchedule(false);
 
     const savedCart = JSON.parse(localStorage.getItem(activeScheduleStorage.cart)) || [];
     const savedStep = Number(localStorage.getItem(activeScheduleStorage.orderStep)) || 1;
@@ -391,6 +486,7 @@ function App() {
         setActiveServiceId(null);
       }
     }
+    setHasHydratedSchedule(true);
   }, [isScheduleRoute, isSubscriptionSchedule, activeScheduleStorage, services, subscriptions]);
 
   // Auto-select covered service if user has an active subscription
@@ -413,7 +509,7 @@ function App() {
 
   // Sync state to localStorage
   React.useEffect(() => {
-    if (!isScheduleRoute) return;
+    if (!isScheduleRoute || !hasHydratedSchedule) return;
 
     localStorage.setItem(activeScheduleStorage.cart, JSON.stringify(cart));
     localStorage.setItem(activeScheduleStorage.orderStep, orderStep);
@@ -433,7 +529,7 @@ function App() {
     } else {
       localStorage.removeItem(activeScheduleStorage.selectedServiceIds);
     }
-  }, [cart, orderStep, orderDetails, selectedServices, selectionQuantities, selectedPlan, isScheduleRoute, isSubscriptionSchedule, activeScheduleStorage]);
+  }, [cart, orderStep, orderDetails, selectedServices, selectionQuantities, selectedPlan, isScheduleRoute, isSubscriptionSchedule, activeScheduleStorage, hasHydratedSchedule]);
 
   React.useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -776,7 +872,7 @@ function App() {
                 name: "Wash & Fold",
                 price: "1999",
                 weight: "25kg",
-                service: "Wash and fold",
+                service: "Wash and dry",
                 features: ["Eco-friendly Wash", "Careful Folding", "Free Pickup & Delivery"]
               },
               {
@@ -849,20 +945,37 @@ function App() {
                             style={{ width: '100%', marginTop: 'auto', padding: '1rem' }}
                             onClick={() => {
                               const planServiceName = plan.name === 'Wash & Fold' ? 'Wash and dry' : plan.service;
-                              const normalize = (s) => s?.toLowerCase().replace(/[^a-z]/g, '').replace('and', '').replace('ironing', 'iron');
-                              const s = services.find(gs => normalize(gs.name) === normalize(planServiceName));
-                              setSelectedPlan({ 
+                              const s = services.find(gs => normalizeServiceValue(gs.name) === normalizeServiceValue(planServiceName));
+                              const nextSelectedPlan = { 
                                 name: plan.name, 
                                 service: planServiceName,
+                                price: Number(plan.price),
                                 totalLimit: parseInt(plan.weight),
                                 used: 0
-                              });
+                              };
+                              const planCartItem = createSubscriptionPlanItem(nextSelectedPlan);
+                              const existingSubscriptionCart = JSON.parse(localStorage.getItem(SCHEDULE_STORAGE.subscription.cart)) || [];
+                              const preservedLaundryItems = existingSubscriptionCart.filter(item => !item.isPlanItem);
+                              const nextSubscriptionCart = [
+                                planCartItem,
+                                ...preservedLaundryItems.map(item => applyPlanCoverageToCartItem(item, nextSelectedPlan))
+                              ];
+
+                              setSelectedPlan(nextSelectedPlan);
+                              setCart(nextSubscriptionCart);
+                              setSelectionQuantities({});
+                              localStorage.setItem(SCHEDULE_STORAGE.subscription.cart, JSON.stringify(nextSubscriptionCart));
+                              localStorage.setItem(SCHEDULE_STORAGE.subscription.orderStep, '1');
+                              localStorage.setItem(SCHEDULE_STORAGE.subscription.selectionQuantities, JSON.stringify({}));
+                              localStorage.setItem(SCHEDULE_STORAGE.subscription.selectedPlan, JSON.stringify(nextSelectedPlan));
                               if (s) {
                                 setSelectedServices([s]);
                                 setActiveServiceId(s._id);
+                                localStorage.setItem(SCHEDULE_STORAGE.subscription.selectedServiceIds, JSON.stringify([s._id]));
                                 handleAction(false, true, '/schedule-subscription');
                                 setOrderStep(1);
                               } else {
+                                localStorage.removeItem(SCHEDULE_STORAGE.subscription.selectedServiceIds);
                                 handleAction(false, true, '/schedule-subscription');
                               }
                             }}
@@ -990,23 +1103,7 @@ function App() {
                 .map(p => ({ ...p, servicePrice: p.services.find(s => s.name === activeService?.name).price }));
 
               const getServiceSubscription = (serviceName) => {
-                if (!serviceName || !subscriptions) return null;
-                const normalize = (s) => s?.toLowerCase().replace(/[^a-z]/g, '').replace('and', '').replace('ironing', 'iron');
-                const target = normalize(serviceName);
-                
-                // Check active subscriptions
-                const sub = subscriptions.find(s => 
-                  s.status === 'Active' && 
-                  (normalize(s.service) === target || normalize(s.plan) === target)
-                );
-                if (sub) return sub;
-
-                // Check selectedPlan (legacy/temporary)
-                if (selectedPlan && normalize(selectedPlan.service) === target) {
-                  return { ...selectedPlan, isTemporary: true };
-                }
-                
-                return null;
+                return getMatchingCoverage(serviceName);
               };
 
               const isServiceCovered = (serviceName) => !!getServiceSubscription(serviceName);
@@ -1348,6 +1445,9 @@ function App() {
                                 <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 700 }}>{item.quantity || '—'}</td>
                                 <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 800, color: isSubUsed ? 'var(--color-primary)' : 'inherit' }}>
                                   {(() => {
+                                    if (item.unit === 'plan' || item.isPlanItem) {
+                                      return `Rs. ${item.total}`;
+                                    }
                                     if (item.unit === 'kg' || svc?.type === 'Global') {
                                       return isSubUsed ? '₹0/kg ✓' : `Rs. ${svc?.basePrice || item.price}/kg`;
                                     }
@@ -1444,9 +1544,6 @@ function App() {
                 <button className="btn btn-secondary" style={{ padding: '0.8rem 2rem' }} onClick={() => setOrderStep(orderStep - 1)}>Back</button>
               ) : (
                   <button className="btn btn-secondary" style={{ padding: '0.8rem 2rem' }} onClick={() => {
-                    setSelectedPlan(null);
-                    localStorage.removeItem('selectedPlan');
-                    localStorage.removeItem(activeScheduleStorage.selectedPlan);
                     navigate('/');
                   }}>Cancel</button>
               )}
@@ -1462,9 +1559,7 @@ function App() {
                         const newKgItems = kgServices
                           .filter(s => !cart.some(item => item.service === s.name && item.unit === 'kg'))
                           .map(s => {
-                            const normalize = (val) => val?.toLowerCase().replace(/[^a-z]/g, '').replace('and', '').replace('ironing', 'iron');
-                            const target = normalize(s.name);
-                            const matchingSub = subscriptions.find(sub => sub.status === 'Active' && (normalize(sub.service) === target || normalize(sub.plan) === target));
+                            const matchingSub = getMatchingCoverage(s.name);
                             const isSubApplied = !!matchingSub && matchingSub.used < matchingSub.totalLimit;
                             return {
                               id: Date.now() + Math.random(),
@@ -1530,23 +1625,7 @@ function App() {
                 .map(p => ({ ...p, servicePrice: p.services.find(s => s.name === activeService?.name).price }));
 
               const getServiceSubscription = (serviceName) => {
-                if (!serviceName || !subscriptions) return null;
-                const normalize = (s) => s?.toLowerCase().replace(/[^a-z]/g, '').replace('and', '').replace('ironing', 'iron');
-                const target = normalize(serviceName);
-                
-                // Check active subscriptions
-                const sub = subscriptions.find(s => 
-                  s.status === 'Active' && 
-                  (normalize(s.service) === target || normalize(s.plan) === target)
-                );
-                if (sub) return sub;
-
-                // Check selectedPlan (legacy/temporary)
-                if (selectedPlan && normalize(selectedPlan.service) === target) {
-                  return { ...selectedPlan, isTemporary: true };
-                }
-                
-                return null;
+                return getMatchingCoverage(serviceName);
               };
 
               const isServiceCovered = (serviceName) => !!getServiceSubscription(serviceName);
@@ -1888,6 +1967,9 @@ function App() {
                                 <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 700 }}>{item.quantity || '—'}</td>
                                 <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 800, color: isSubUsed ? 'var(--color-primary)' : 'inherit' }}>
                                   {(() => {
+                                    if (item.unit === 'plan' || item.isPlanItem) {
+                                      return `Rs. ${item.total}`;
+                                    }
                                     if (item.unit === 'kg' || svc?.type === 'Global') {
                                       return isSubUsed ? '₹0/kg ✓' : `Rs. ${svc?.basePrice || item.price}/kg`;
                                     }
@@ -2001,9 +2083,7 @@ function App() {
                         const newKgItems = kgServices
                           .filter(s => !cart.some(item => item.service === s.name && item.unit === 'kg'))
                           .map(s => {
-                            const normalize = (val) => val?.toLowerCase().replace(/[^a-z]/g, '').replace('and', '').replace('ironing', 'iron');
-                            const target = normalize(s.name);
-                            const matchingSub = subscriptions.find(sub => sub.status === 'Active' && (normalize(sub.service) === target || normalize(sub.plan) === target));
+                            const matchingSub = getMatchingCoverage(s.name);
                             const isSubApplied = !!matchingSub && matchingSub.used < matchingSub.totalLimit;
                             return {
                               id: Date.now() + Math.random(),
