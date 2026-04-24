@@ -1,8 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import axios from 'axios';
-
-// Configure Axios
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'https://subratha.onrender.com';
+import axios from './apiConfig';
 
 // Axios Interceptor to attach the token if available
 axios.interceptors.request.use((config) => {
@@ -206,7 +203,7 @@ function App() {
         orderStep: 1,
         orderDetails: { address: '', time: '', service: '' }
       };
-      await axios.put('https://subratha.onrender.com/api/auth/draft-order', { draftOrder: emptyDraft }, { withCredentials: true });
+      await axios.put('/api/auth/draft-order', { draftOrder: emptyDraft }, { withCredentials: true });
     } catch (err) {
       console.error('Error clearing draft order:', err);
     }
@@ -968,23 +965,16 @@ function App() {
                         </div>
 
                         {Object.keys(selectionQuantities).length > 0 && (
-                          <div style={{
-                            background: (isCovered && !isLimitExceeded) ? 'linear-gradient(90deg, #16a34a, #15803d)' : 'var(--color-primary)',
+                          <div className="selected-items-card" style={{
+                            background: 'linear-gradient(90deg, #5b3e84, #7c5cb5)',
                             borderRadius: '16px', padding: '1.25rem', marginBottom: '2rem',
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            color: '#fff', boxShadow: (isCovered && !isLimitExceeded) ? '0 8px 24px rgba(22,163,74,0.25)' : '0 8px 24px rgba(91,62,132,0.2)',
+                            color: '#fff', boxShadow: '0 8px 24px rgba(91,62,132,0.25)',
                           }}>
-                            <div>
+                            <div className="selected-items-info">
                               <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{Object.keys(selectionQuantities).length} Items Selected</div>
                               <div style={{ fontSize: '0.85rem', opacity: 0.85 }}>{activeService.name} · {(isCovered && !isLimitExceeded) ? 'Covered under subscription' : isLimitExceeded ? 'Limit exceeded · Normal pricing applies' : "Click '+' to add to bag"}</div>
                             </div>
-                            <div style={{
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '1rem', 
-                              marginTop: window.innerWidth < 480 ? '1rem' : '0',
-                              flexWrap: 'wrap'
-                            }}>
+                            <div className="selected-items-actions">
                               <div style={{ fontWeight: 900, fontSize: 'clamp(1.2rem, 4vw, 1.5rem)' }}>
                                 {(isCovered && !isLimitExceeded) ? '₹0 (Covered)' : (() => {
                                   const total = Object.entries(selectionQuantities).reduce((acc, [id, qty]) => {
@@ -999,9 +989,9 @@ function App() {
                                 style={{ 
                                   padding: '0.6rem 1.5rem', 
                                   background: '#fff', 
-                                  color: (isCovered && !isLimitExceeded) ? '#16a34a' : 'var(--color-primary)', 
+                                  color: 'var(--color-primary)', 
                                   fontWeight: 800,
-                                  width: window.innerWidth < 480 ? '100%' : 'auto'
+                                  whiteSpace: 'nowrap'
                                 }}
                                 onClick={() => {
                                   const newItems = Object.entries(selectionQuantities).map(([id, qty]) => {
@@ -1500,17 +1490,16 @@ function App() {
                         </div>
 
                         {Object.keys(selectionQuantities).length > 0 && (
-                          <div style={{
-                            background: (isCovered && !isLimitExceeded) ? 'linear-gradient(90deg, #16a34a, #15803d)' : 'var(--color-primary)',
+                          <div className="selected-items-card" style={{
+                            background: 'linear-gradient(90deg, #5b3e84, #7c5cb5)',
                             borderRadius: '16px', padding: '1.25rem', marginBottom: '2rem',
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            color: '#fff', boxShadow: (isCovered && !isLimitExceeded) ? '0 8px 24px rgba(22,163,74,0.25)' : '0 8px 24px rgba(91,62,132,0.2)',
+                            color: '#fff', boxShadow: '0 8px 24px rgba(91,62,132,0.25)',
                           }}>
-                            <div>
+                            <div className="selected-items-info">
                               <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{Object.keys(selectionQuantities).length} Items Selected</div>
                               <div style={{ fontSize: '0.85rem', opacity: 0.85 }}>{activeService.name} · {(isCovered && !isLimitExceeded) ? 'Covered under subscription' : isLimitExceeded ? 'Limit exceeded · Normal pricing applies' : "Click '+' to add to bag"}</div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                            <div className="selected-items-actions">
                               <div style={{ fontWeight: 900, fontSize: '1.5rem' }}>
                                 {(isCovered && !isLimitExceeded) ? '₹0 (Covered)' : (() => {
                                   const total = Object.entries(selectionQuantities).reduce((acc, [id, qty]) => {
@@ -1522,7 +1511,7 @@ function App() {
                               </div>
                               <button
                                 className="btn btn-secondary"
-                                style={{ padding: '0.6rem 1.5rem', background: '#fff', color: (isCovered && !isLimitExceeded) ? '#16a34a' : 'var(--color-primary)', fontWeight: 800 }}
+                                style={{ padding: '0.6rem 1.5rem', background: '#fff', color: 'var(--color-primary)', fontWeight: 800, whiteSpace: 'nowrap' }}
                                 onClick={() => {
                                   const newItems = Object.entries(selectionQuantities).map(([id, qty]) => {
                                     const prod = activeServiceProducts.find(p => p._id === id);

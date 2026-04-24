@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://subratha.onrender.com',
+        target: 'https://subratha-a013.onrender.com',
         changeOrigin: true
       }
     }

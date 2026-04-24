@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from './apiConfig';
 import {
   Plus, Save, Trash2, Edit2, Check, X, Search, Settings, Shirt, Zap, Calendar, BarChart, User,
   Package, DollarSign, Hotel, LogOut, ChevronDown, ChevronUp, RefreshCw

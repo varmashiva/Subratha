@@ -30,7 +30,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'https://subratha.com',
   'https://www.subratha.com',
-  'https://subratha.onrender.com'
+  'https://subratha-a013.onrender.com'
 ];
 
 app.use(cors({

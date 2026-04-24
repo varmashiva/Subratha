@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from './apiConfig';
 import { ArrowLeft, LogOut, Package, Clock, MapPin, CheckCircle, XCircle, Truck, RefreshCw, Zap } from 'lucide-react';
 
 const API_URL = '/api';
