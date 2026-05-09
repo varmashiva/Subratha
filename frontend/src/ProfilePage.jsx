@@ -25,7 +25,18 @@ export default function ProfilePage({ user, onBack, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [subscriptions, setSubscriptions] = useState([]);
+  const [services, setServices] = useState([]);
   const [loadingSub, setLoadingSub] = useState(true);
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const { data } = await axios.get(`${API_URL}/services`);
+        setServices(data);
+      } catch (err) { console.error(err); }
+    };
+    fetchServices();
+  }, []);
 
   useEffect(() => {
     const fetchActiveSub = async () => {
@@ -44,7 +55,7 @@ export default function ProfilePage({ user, onBack, onLogout }) {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const { data } = await axios.get(`${API_URL}/orders/my-orders`, { withCredentials: true });
+        const { data } = await axios.get(`${API_URL}/orders/my`, { withCredentials: true });
         setOrders(data);
       } catch (err) {
         console.error('Error fetching orders:', err);
@@ -55,7 +66,6 @@ export default function ProfilePage({ user, onBack, onLogout }) {
     fetchOrders();
   }, []);
 
-
   const totalOrders = orders.length;
   const activeOrders = orders.filter(o => !['completed', 'delivered', 'cancelled'].includes((o.status || '').toLowerCase())).length;
   const totalPaid = orders
@@ -65,12 +75,14 @@ export default function ProfilePage({ user, onBack, onLogout }) {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f8f7fa 0%, #ede9f5 100%)',
-      fontFamily: 'var(--font-primary, Inter, sans-serif)',
+      background: 'linear-gradient(135deg, #fdfbff 0%, #f3effb 100%)',
+      fontFamily: 'inherit',
     }}>
       {/* Header */}
       <div style={{
-        background: '#fff',
+        background: 'rgba(255, 255, 255, 0.8)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
         borderBottom: '1px solid rgba(91,62,132,0.1)',
         padding: '1rem 2rem',
         display: 'flex',
@@ -79,234 +91,244 @@ export default function ProfilePage({ user, onBack, onLogout }) {
         position: 'sticky',
         top: 0,
         zIndex: 100,
-        boxShadow: '0 2px 20px rgba(91,62,132,0.06)',
       }}>
         <button
           onClick={onBack}
           style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: '#5b3e84', fontWeight: 600, fontSize: '0.95rem',
-            padding: '0.5rem 1rem', borderRadius: '8px',
-            transition: 'background 0.2s',
+            display: 'flex', alignItems: 'center', gap: '0.6rem',
+            background: 'rgba(91,62,132,0.05)', border: 'none', cursor: 'pointer',
+            color: 'var(--color-primary)', fontWeight: 700, fontSize: '0.9rem',
+            padding: '0.6rem 1.2rem', borderRadius: '100px',
+            transition: 'all 0.2s',
           }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(91,62,132,0.08)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'none'}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(91,62,132,0.1)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'rgba(91,62,132,0.05)'}
         >
-          <ArrowLeft size={20} /> Back to Home
+          <ArrowLeft size={18} /> Home
         </button>
 
-        <span style={{ fontWeight: 800, fontSize: '1.2rem', color: '#5b3e84', letterSpacing: '-0.02em' }}>
-          Subratha
-        </span>
+        <img 
+          src="/images/subrathalogo.png" 
+          alt="Subratha" 
+          style={{ height: '52px', width: 'auto', display: 'block' }} 
+        />
 
         <button
           onClick={onLogout}
           style={{
             display: 'flex', alignItems: 'center', gap: '0.5rem',
-            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-            color: '#dc2626', cursor: 'pointer', fontWeight: 600,
-            fontSize: '0.85rem', padding: '0.5rem 1rem', borderRadius: '8px',
+            background: 'none', border: '1px solid rgba(239,68,68,0.2)',
+            color: '#dc2626', cursor: 'pointer', fontWeight: 700,
+            fontSize: '0.85rem', padding: '0.6rem 1.2rem', borderRadius: '100px',
             transition: 'all 0.2s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.15)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.05)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
         >
           <LogOut size={16} /> Logout
         </button>
       </div>
 
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
-
-        {/* Profile Card */}
+      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '2.5rem 1.5rem 6rem' }}>
+        
+        {/* Profile Section */}
         <div style={{
-          background: 'linear-gradient(135deg, #5b3e84 0%, #7c5cb5 100%)',
-          borderRadius: '20px',
-          padding: '2.5rem',
-          marginBottom: '2rem',
+          background: 'linear-gradient(135deg, #5b3e84 0%, #3e2b5a 100%)',
+          borderRadius: '28px',
+          padding: '3rem',
+          marginBottom: '2.5rem',
           color: '#fff',
           display: 'flex',
           alignItems: 'center',
-          gap: '2rem',
-          boxShadow: '0 20px 60px rgba(91,62,132,0.25)',
-          flexWrap: 'wrap',
+          gap: '2.5rem',
+          boxShadow: '0 25px 50px -12px rgba(91,62,132,0.35)',
+          position: 'relative',
+          overflow: 'hidden'
         }}>
+          {/* Decorative Circle */}
           <div style={{
-            width: '90px', height: '90px', borderRadius: '50%',
-            background: 'rgba(255,255,255,0.2)',
+            position: 'absolute', top: '-10%', right: '-5%', width: '300px', height: '300px',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
+            pointerEvents: 'none'
+          }}></div>
+
+          <div style={{
+            width: '110px', height: '110px', borderRadius: '32px',
+            background: 'rgba(255,255,255,0.15)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '2.5rem', fontWeight: 800, color: '#fff',
             overflow: 'hidden', flexShrink: 0,
-            border: '3px solid rgba(255,255,255,0.3)',
+            border: '2px solid rgba(255,255,255,0.2)',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+            position: 'relative', zIndex: 1
           }}>
             {user?.picture
               ? <img src={user.picture} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : (user?.name ? user.name.charAt(0).toUpperCase() : 'U')}
+              : <span style={{ fontSize: '3rem', fontWeight: 900 }}>{user?.name?.charAt(0) || 'U'}</span>}
           </div>
 
-          <div style={{ flex: 1 }}>
-            <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.02em' }}>
-              {user?.name || 'User'}
+          <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
+            <h1 style={{ margin: 0, fontSize: '2.25rem', fontWeight: 900, letterSpacing: '-0.04em', color: '#fff' }}>
+              {user?.name || 'Guest User'}
             </h1>
-            <p style={{ margin: '0.3rem 0 0', opacity: 0.75, fontSize: '0.95rem' }}>{user?.email}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.5rem', opacity: 0.85 }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4ade80' }}></div>
+              <span style={{ fontSize: '1rem', fontWeight: 500 }}>{user?.email}</span>
+            </div>
           </div>
         </div>
 
-        {/* Subscriptions Section */}
-        {subscriptions.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '-0.5rem' }}>
-              <Zap size={20} color="#5b3e84" />
-              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#1a1a2e' }}>Your Subscriptions</h2>
-            </div>
-            
-            {subscriptions.map((sub, idx) => (
-              <div key={sub._id || idx} style={{
-                background: '#fff',
-                borderRadius: '20px',
-                padding: '2rem',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
-                border: '2px solid rgba(91,62,132,0.1)',
-                position: 'relative',
-                overflow: 'hidden'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                  <div>
-                    <div style={{ color: '#9488a0', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Plan Type</div>
-                    <h2 style={{ margin: '0.2rem 0 0', fontSize: '1.5rem', fontWeight: 800, color: '#5b3e84' }}>{sub.plan}</h2>
-                  </div>
-                  <div style={{
-                    background: 'rgba(22,163,74,0.1)', color: '#16a34a', padding: '0.4rem 1rem', borderRadius: '100px', fontSize: '0.8rem', fontWeight: 700
-                  }}>
-                    ACTIVE
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                    <span style={{ color: '#1a1a2e', fontWeight: 600 }}>Usage: {sub.used}kg / {sub.totalLimit}kg</span>
-                    <span style={{ color: '#9488a0' }}>{Math.round((sub.used / sub.totalLimit) * 100)}%</span>
-                  </div>
-                  <div style={{ width: '100%', height: '10px', background: 'rgba(91,62,132,0.1)', borderRadius: '100px', overflow: 'hidden' }}>
-                    <div style={{
-                      width: `${Math.min(100, (sub.used / sub.totalLimit) * 100)}%`,
-                      height: '100%',
-                      background: sub.used > sub.totalLimit ? '#d97706' : '#5b3e84',
-                      borderRadius: '100px',
-                      transition: 'width 0.5s ease-out'
-                    }}></div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={{ color: '#9488a0', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>Service Covered</div>
-                    <div style={{ fontSize: '0.9rem', color: '#1a1a2e', fontWeight: 600 }}>{sub.service}</div>
-                  </div>
-                  <div>
-                    <div style={{ color: '#9488a0', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>Valid Till</div>
-                    <div style={{ fontSize: '0.9rem', color: '#1a1a2e', fontWeight: 600 }}>
-                      {new Date(sub.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ color: '#9488a0', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>Monthly Cost</div>
-                    <div style={{ fontSize: '0.9rem', color: '#1a1a2e', fontWeight: 600 }}>₹{sub.price}/mo</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Stats Row */}
+        {/* Stats Grid */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: '1rem',
-          marginBottom: '2.5rem',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: '1.5rem',
+          marginBottom: '3rem',
         }}>
           {[
             {
               label: 'Total Orders',
               value: totalOrders,
-              icon: <Package size={24} />,
-              color: '#5b3e84',
-              bg: 'rgba(91,62,132,0.08)',
+              icon: <Package size={22} />,
+              theme: '#5b3e84'
             },
             {
               label: 'Active Orders',
               value: activeOrders,
-              icon: <RefreshCw size={24} />,
-              color: '#d97706',
-              bg: 'rgba(243,156,18,0.08)',
-            },
+              icon: <RefreshCw size={22} />,
+              theme: '#f59e0b'
+            }
           ].map((stat, i) => (
             <div key={i} style={{
               background: '#fff',
-              borderRadius: '16px',
-              padding: '1.5rem',
+              borderRadius: '24px',
+              padding: '1.75rem',
               display: 'flex',
-              flexDirection: 'column',
-              gap: '0.5rem',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-              border: '1px solid rgba(91,62,132,0.06)',
+              alignItems: 'center',
+              gap: '1.25rem',
+              boxShadow: '0 10px 20px rgba(91,62,132,0.04)',
+              border: '1px solid rgba(91,62,132,0.08)',
+              transition: 'transform 0.2s',
+              cursor: 'default'
             }}>
               <div style={{
-                width: '44px', height: '44px', borderRadius: '12px',
-                background: stat.bg, color: stat.color,
+                width: '52px', height: '52px', borderRadius: '16px',
+                background: `${stat.theme}15`, color: stat.theme,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0
               }}>
                 {stat.icon}
               </div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#1a1a2e', lineHeight: 1 }}>
-                {stat.value}
-              </div>
-              <div style={{ fontSize: '0.8rem', color: '#9488a0', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                {stat.label}
+              <div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--color-text)', lineHeight: 1 }}>
+                  {stat.value}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#9488a0', fontWeight: 700, marginTop: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                  {stat.label}
+                </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Orders Section */}
-        <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#1a1a2e' }}>
-            Order History
-          </h2>
-          {totalPaid > 0 && (
-            <div style={{
-              background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.2)',
-              color: '#16a34a', borderRadius: '10px', padding: '0.4rem 1rem',
-              fontSize: '0.85rem', fontWeight: 700,
-            }}>
-              ₹{totalPaid.toLocaleString('en-IN')} paid to delivery
+        {/* Subscriptions Grid */}
+        {subscriptions.length > 0 && (
+          <div style={{ marginBottom: '3.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1.5rem' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'var(--color-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Zap size={18} fill="white" />
+              </div>
+              <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, color: 'var(--color-text)', letterSpacing: '-0.02em' }}>
+                Active Subscriptions
+              </h2>
             </div>
-          )}
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
+              {subscriptions.map((sub, idx) => (
+                <div key={sub._id || idx} style={{
+                  background: '#fff',
+                  borderRadius: '24px',
+                  padding: '2.5rem',
+                  boxShadow: '0 15px 35px rgba(91,62,132,0.06)',
+                  border: '1px solid rgba(91,62,132,0.1)',
+                  position: 'relative'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <h3 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 900, color: 'var(--color-primary)', letterSpacing: '-0.03em' }}>
+                          {sub.plan}
+                        </h3>
+                        <span style={{ background: '#4ade8020', color: '#16a34a', padding: '0.3rem 0.75rem', borderRadius: '100px', fontSize: '0.7rem', fontWeight: 800 }}>ACTIVE</span>
+                      </div>
+                      <p style={{ margin: '0.4rem 0 0', color: '#9488a0', fontWeight: 600, fontSize: '0.95rem' }}>
+                        Premium laundry coverage for {sub.service}
+                      </p>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--color-text)' }}>₹{sub.price}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#9488a0', fontWeight: 700, textTransform: 'uppercase' }}>Per Month</div>
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(91,62,132,0.03)', borderRadius: '18px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                      <span style={{ color: 'var(--color-text)', fontWeight: 800, fontSize: '0.9rem' }}>Usage Progress</span>
+                      <span style={{ color: 'var(--color-primary)', fontWeight: 900, fontSize: '0.9rem' }}>{sub.used} / {sub.totalLimit} KG</span>
+                    </div>
+                    <div style={{ width: '100%', height: '12px', background: 'rgba(91,62,132,0.1)', borderRadius: '100px', overflow: 'hidden' }}>
+                      <div style={{
+                        width: `${Math.min(100, (sub.used / sub.totalLimit) * 100)}%`,
+                        height: '100%',
+                        background: 'linear-gradient(90deg, #5b3e84, #7c5cb5)',
+                        borderRadius: '100px',
+                        transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
+                      }}></div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#9488a0', fontSize: '0.85rem', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Clock size={16} />
+                      Valid until {new Date(sub.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                    <div style={{ color: 'var(--color-primary)', cursor: 'pointer', fontWeight: 800 }}>View Plan Details →</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Order History */}
+        <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(91,62,132,0.1)', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Package size={18} />
+            </div>
+            <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, color: 'var(--color-text)', letterSpacing: '-0.02em' }}>
+              Recent Orders
+            </h2>
+          </div>
         </div>
 
         {loading ? (
-          <div style={{
-            background: '#fff', borderRadius: '16px', padding: '4rem',
-            textAlign: 'center', color: '#5b3e84', fontWeight: 600,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem'
-          }}>
-            <div className="spinner spinner-lg"></div>
-            <p style={{ margin: 0 }}>Loading your orders...</p>
+          <div style={{ padding: '6rem 0', textAlign: 'center' }}>
+            <div className="spinner spinner-lg" style={{ margin: '0 auto 1.5rem' }}></div>
+            <p style={{ color: '#b6a3ce', fontWeight: 700 }}>Fetching your order timeline...</p>
           </div>
         ) : orders.length === 0 ? (
           <div style={{
-            background: '#fff', borderRadius: '16px', padding: '4rem',
-            textAlign: 'center', color: '#9488a0',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+            background: '#fff', borderRadius: '28px', padding: '5rem 2rem',
+            textAlign: 'center', border: '1.5px dashed rgba(91,62,132,0.15)',
           }}>
-            <Package size={48} style={{ marginBottom: '1rem', opacity: 0.3 }} />
-            <h3 style={{ margin: '0 0 0.5rem', color: '#5b3e84' }}>No Orders Yet</h3>
-            <p style={{ margin: 0, fontSize: '0.9rem' }}>Your order history will appear here once you place your first order.</p>
+            <div style={{ width: '80px', height: '80px', borderRadius: '24px', background: 'rgba(91,62,132,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', color: '#b6a3ce' }}>
+              <Package size={40} strokeWidth={1.5} />
+            </div>
+            <h3 style={{ margin: '0 0 0.5rem', color: 'var(--color-primary)', fontWeight: 900, fontSize: '1.5rem' }}>No Orders Found</h3>
+            <p style={{ margin: 0, color: '#9488a0', fontWeight: 500 }}>Your laundry journey starts here. Place your first order today!</p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {orders.map((order, idx) => {
               const st = getStatusStyle(order.status);
               const isExpanded = expandedOrder === order._id;
@@ -316,132 +338,217 @@ export default function ProfilePage({ user, onBack, onLogout }) {
 
               return (
                 <div key={order._id} style={{
-                  background: '#fff', borderRadius: '16px',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-                  border: isExpanded ? '2px solid rgba(91,62,132,0.3)' : '1px solid rgba(91,62,132,0.08)',
+                  background: '#fff', 
+                  borderRadius: '24px',
+                  boxShadow: isExpanded ? '0 20px 40px rgba(91,62,132,0.1)' : '0 4px 15px rgba(0,0,0,0.02)',
+                  border: isExpanded ? '2px solid var(--color-primary)' : '1.5px solid rgba(91,62,132,0.08)',
                   overflow: 'hidden',
-                  transition: 'all 0.25s ease',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transform: isExpanded ? 'translateY(-2px)' : 'none'
                 }}>
-                  {/* Order Header */}
                   <div
                     onClick={() => setExpandedOrder(isExpanded ? null : order._id)}
                     style={{
-                      padding: '1.25rem 1.5rem',
-                      display: 'flex', alignItems: 'center', gap: '1rem',
+                      padding: '1.75rem 2rem',
+                      display: 'flex', alignItems: 'center', gap: '1.5rem',
                       cursor: 'pointer',
                       flexWrap: 'wrap',
                     }}
                   >
                     <div style={{
-                      width: '44px', height: '44px', borderRadius: '12px',
-                      background: 'rgba(91,62,132,0.08)',
+                      width: '56px', height: '56px', borderRadius: '18px',
+                      background: isExpanded ? 'var(--color-primary)' : 'rgba(91,62,132,0.06)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#5b3e84', flexShrink: 0,
+                      color: isExpanded ? '#fff' : 'var(--color-primary)', flexShrink: 0,
+                      transition: 'all 0.2s'
                     }}>
-                      <Package size={20} />
+                      <Package size={24} />
                     </div>
 
-                    <div style={{ flex: 1, minWidth: '120px' }}>
-                      <div style={{ fontWeight: 700, color: '#1a1a2e', fontSize: '0.95rem' }}>
-                        Order #{order._id.substring(0, 8).toUpperCase()}
+                    <div style={{ flex: 1, minWidth: '160px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                        <span style={{ fontWeight: 900, color: 'var(--color-text)', fontSize: '1.1rem', letterSpacing: '-0.02em' }}>
+                          #{order._id.substring(0, 8).toUpperCase()}
+                        </span>
+                        <span style={{
+                          padding: '0.25rem 0.8rem', borderRadius: '100px',
+                          fontSize: '0.65rem', fontWeight: 800,
+                          textTransform: 'uppercase', letterSpacing: '0.05em',
+                          background: st.bg, color: st.color,
+                          border: `1px solid ${st.border}`,
+                        }}>
+                          {order.status === 'pending_weight' ? 'Weight Pending' : (order.status || 'Pending')}
+                        </span>
                       </div>
-                      <div style={{ fontSize: '0.8rem', color: '#9488a0', marginTop: '0.2rem' }}>
-                        {date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        &nbsp;· {order.items?.length || 0} item(s)
+                      <div style={{ fontSize: '0.85rem', color: '#9488a0', fontWeight: 600 }}>
+                        Ordered on {date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        &nbsp;· {order.items?.length || 0} items
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 800, fontSize: '1.1rem', color: isPendingWeight ? '#8b5cf6' : (isCompleted ? '#16a34a' : '#1a1a2e') }}>
-                          {isPendingWeight ? 'Weight pending' : `₹${(order.totalAmount || 0).toLocaleString('en-IN')}`}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', textAlign: 'right' }}>
+                      <div>
+                        <div style={{ 
+                          fontWeight: 900, 
+                          fontSize: '1.4rem', 
+                          color: isPendingWeight ? '#8b5cf6' : (isCompleted ? '#16a34a' : 'var(--color-text)'),
+                          letterSpacing: '-0.03em'
+                        }}>
+                          {isPendingWeight ? 'TBD' : `₹${(order.totalAmount || 0).toLocaleString('en-IN')}`}
                         </div>
-                        {isCompleted && (
-                          <div style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 600 }}>PAID</div>
-                        )}
-                        {isPendingWeight && (
-                          <div style={{ fontSize: '0.65rem', color: '#8b5cf6', fontWeight: 600 }}>TBD AFTER PICKUP</div>
+                        {!isPendingWeight && (
+                          <div style={{ 
+                            fontSize: '0.65rem', 
+                            color: isCompleted ? '#16a34a' : '#f59e0b', 
+                            fontWeight: 800, 
+                            textTransform: 'uppercase',
+                            marginTop: '0.2rem'
+                          }}>
+                            {isCompleted ? 'Payment Success' : 'Payment Pending'}
+                          </div>
                         )}
                       </div>
-
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                        padding: '0.3rem 0.8rem', borderRadius: '100px',
-                        fontSize: '0.75rem', fontWeight: 700,
-                        textTransform: 'uppercase', letterSpacing: '0.05em',
-                        background: st.bg, color: st.color,
-                        border: `1px solid ${st.border}`,
+                      <div style={{ 
+                        color: 'var(--color-primary)', 
+                        transform: `rotate(${isExpanded ? 180 : 0}deg)`, 
+                        transition: 'transform 0.3s' 
                       }}>
-                        {st.icon} {order.status === 'pending_weight' ? 'Weight Pending' : (order.status || 'Pending')}
-                      </span>
+                        <Zap size={20} />
+                      </div>
                     </div>
                   </div>
 
-                  {/* Expanded Details */}
                   {isExpanded && (
-                    <div style={{
-                      borderTop: '1px solid rgba(91,62,132,0.08)',
-                      padding: '1.25rem 1.5rem',
-                      background: 'rgba(91,62,132,0.02)',
+                    <div className="fade-in" style={{
+                      borderTop: '1.5px solid rgba(91,62,132,0.08)',
+                      padding: '2rem',
+                      background: 'linear-gradient(to bottom, rgba(91,62,132,0.02), #fff)',
                     }}>
-                      {isPendingWeight && (
-                        <div style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '1.25rem', fontSize: '0.85rem', color: '#8b5cf6' }}>
-                          <Zap size={14} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
-                          <strong>Note:</strong> Final weight and price will be updated by our concierge after verification at pickup.
-                        </div>
-                      )}
-                      {/* Address & Time */}
-                      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-                        <div style={{ flex: 1, minWidth: '180px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#9488a0', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.3rem' }}>
-                            <MapPin size={12} /> Pickup Address
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem', marginBottom: '2.5rem' }}>
+                        <div>
+                          <div style={{ color: '#9488a0', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <MapPin size={14} /> Pickup Destination
                           </div>
-                          <div style={{ color: '#1a1a2e', fontSize: '0.9rem', lineHeight: 1.5 }}>{order.address}</div>
+                          <div style={{ color: 'var(--color-text)', fontSize: '1rem', lineHeight: 1.6, fontWeight: 600 }}>{order.address}</div>
                         </div>
-                        <div style={{ flex: 1, minWidth: '140px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#9488a0', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.3rem' }}>
-                            <Clock size={12} /> Pickup Time
+                        <div>
+                          <div style={{ color: '#9488a0', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <Clock size={14} /> Scheduled Pickup
                           </div>
-                          <div style={{ color: '#1a1a2e', fontSize: '0.9rem' }}>{order.pickupTime}</div>
+                          <div style={{ color: 'var(--color-text)', fontSize: '1rem', fontWeight: 600 }}>{order.pickupTime}</div>
                         </div>
+                        {order.contactNumber && (
+                           <div>
+                           <div style={{ color: '#9488a0', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                             <RefreshCw size={14} /> Contact
+                           </div>
+                           <div style={{ color: 'var(--color-text)', fontSize: '1rem', fontWeight: 600 }}>{order.contactNumber}</div>
+                         </div>
+                        )}
                       </div>
 
-                      {/* Items Table */}
-                      <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                      <div style={{ background: '#fff', borderRadius: '18px', border: '1px solid rgba(91,62,132,0.08)', overflow: 'hidden' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                           <thead>
-                            <tr style={{ borderBottom: '1px solid rgba(91,62,132,0.1)' }}>
-                              {['Item', 'Service', 'Qty', 'Price', 'Total'].map(h => (
-                                <th key={h} style={{
-                                  padding: '0.6rem 0.75rem', textAlign: h === 'Item' || h === 'Service' ? 'left' : 'right',
-                                  color: '#9488a0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem',
-                                  whiteSpace: 'nowrap',
-                                }}>{h}</th>
-                              ))}
+                            <tr style={{ background: 'rgba(91,62,132,0.02)' }}>
+                               <th style={{ padding: '1rem 1.25rem', textAlign: 'left', color: '#9488a0', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.1em' }}>Item Detail</th>
+                              <th style={{ padding: '1rem', textAlign: 'center', color: '#9488a0', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.1em' }}>QTY</th>
+                              <th style={{ padding: '1rem', textAlign: 'center', color: '#9488a0', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.1em' }}>WT</th>
+                              <th style={{ padding: '1rem', textAlign: 'right', color: '#9488a0', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.1em' }}>Rate</th>
+                              <th style={{ padding: '1rem 1.25rem', textAlign: 'right', color: '#9488a0', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.1em' }}>Total</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {(order.items || []).map((item, i) => (
-                              <tr key={i} style={{ borderBottom: '1px solid rgba(91,62,132,0.05)' }}>
-                                <td style={{ padding: '0.75rem', color: '#1a1a2e', fontWeight: 600 }}>{item.product}</td>
-                                <td style={{ padding: '0.75rem', color: '#5b3e84' }}>{item.service}</td>
-                                <td style={{ padding: '0.75rem', textAlign: 'right', color: '#1a1a2e' }}>
-                                   {item.unit === 'kg' && (item.quantity === 0 || item.quantity === null) ? 'Pending' : `${item.quantity} ${item.unit || 'pcs'}`}
-                                </td>
-                                <td style={{ padding: '0.75rem', textAlign: 'right', color: '#9488a0' }}>₹{item.price}{item.unit === 'kg' ? '/kg' : '/pc'}</td>
-                                <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 700, color: '#5b3e84' }}>
-                                   {item.unit === 'kg' && (item.quantity === 0 || item.quantity === null) ? '—' : `₹${item.total}`}
-                                </td>
-                              </tr>
-                            ))}
+                            {(() => {
+                              const itemsByService = (order.items || []).reduce((acc, item) => {
+                                if (!acc[item.service]) acc[item.service] = [];
+                                acc[item.service].push(item);
+                                return acc;
+                              }, {});
+
+                              const rows = Object.entries(itemsByService).map(([serviceName, serviceItems]) => {
+                                const svcInfo = services.find(s => s.name === serviceName);
+                                const isGlobalSvc = svcInfo?.type === 'Global';
+
+                                const firstItem = serviceItems[0];
+                                const globalRate = firstItem?.price || svcInfo?.basePrice || 0;
+                                const globalWeight = firstItem?.weight || 0;
+
+                                const serviceTotal = serviceItems.reduce((acc, item) => acc + (item.total || 0), 0);
+
+                                return (
+                                  <React.Fragment key={serviceName}>
+                                    <tr style={{ background: isGlobalSvc ? 'rgba(91,62,132,0.08)' : 'rgba(91,62,132,0.04)', borderBottom: '1.5px solid rgba(91,62,132,0.08)' }}>
+                                      <td colSpan={isGlobalSvc ? 2 : 4} style={{ padding: '0.85rem 1.25rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                          <div style={{ width: '3px', height: '14px', background: 'var(--color-primary)', borderRadius: '10px' }}></div>
+                                          <span style={{ fontWeight: 900, color: '#5b3e84', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                                            {serviceName}
+                                          </span>
+                                        </div>
+                                      </td>
+
+                                      {isGlobalSvc ? (
+                                        <>
+                                          <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(91,62,132,0.08)', padding: '0.3rem 0.75rem', borderRadius: '100px' }}>
+                                              <span style={{ fontWeight: 900, color: 'var(--color-primary)', fontSize: '0.85rem' }}>{globalWeight}</span>
+                                              <span style={{ fontSize: '0.65rem', color: '#9488a0', fontWeight: 800 }}>KG</span>
+                                            </div>
+                                          </td>
+                                          <td style={{ padding: '0.85rem 1rem', textAlign: 'right', fontWeight: 700, color: '#9488a0', fontSize: '0.85rem' }}>
+                                            ₹{globalRate}<span style={{ fontSize: '0.7rem' }}>/kg</span>
+                                          </td>
+                                          <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: 900, color: '#5b3e84', fontSize: '1rem' }}>
+                                            ₹{serviceTotal.toLocaleString()}
+                                          </td>
+                                        </>
+                                      ) : (
+                                        <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right', fontWeight: 900, color: '#5b3e84', fontSize: '1rem' }}>
+                                          ₹{serviceTotal.toLocaleString()}
+                                        </td>
+                                      )}
+                                    </tr>
+
+                                    {serviceItems.map((item, i) => {
+                                      const rate = item.price || 0;
+                                      const itemTotal = item.total || 0;
+
+                                      return (
+                                        <tr key={i} style={{ borderBottom: i === serviceItems.length - 1 ? 'none' : '1px solid rgba(91,62,132,0.05)' }}>
+                                          <td style={{ padding: '1rem 1.25rem', color: 'var(--color-text)', fontWeight: 700, fontSize: '0.95rem' }}>{item.product}</td>
+                                          <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(91,62,132,0.05)', padding: '0.3rem 0.75rem', borderRadius: '100px' }}>
+                                              <span style={{ fontWeight: 900, color: 'var(--color-primary)', fontSize: '0.85rem' }}>{item.quantity}</span>
+                                              <span style={{ fontSize: '0.65rem', color: '#9488a0', fontWeight: 800, textTransform: 'uppercase' }}>PCS</span>
+                                            </div>
+                                          </td>
+                                          <td style={{ padding: '1rem', textAlign: 'center', color: '#9488a0', fontSize: '0.85rem', fontWeight: 600 }}>
+                                            {isGlobalSvc ? <span style={{ color: '#b6a3ce' }}>—</span> : (item.weight > 0 ? `${item.weight} kg` : '—')}
+                                          </td>
+                                          <td style={{ padding: '1rem', textAlign: 'right', color: '#9488a0', fontSize: '0.85rem', fontWeight: 600 }}>
+                                            {isGlobalSvc ? '—' : (rate > 0 ? `₹${rate}/pcs` : '—')}
+                                          </td>
+                                          <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontWeight: 900, color: isGlobalSvc ? '#b6a3ce' : 'var(--color-text)', fontSize: '1rem' }}>
+                                            {isGlobalSvc ? '—' : `₹${itemTotal.toLocaleString()}`}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </React.Fragment>
+                                );
+                              });
+
+                              return rows;
+                            })()}
                           </tbody>
                           <tfoot>
-                            <tr>
-                              <td colSpan={4} style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 700, color: '#1a1a2e', fontSize: '0.9rem' }}>
-                                Total Amount
-                              </td>
-                              <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 800, fontSize: '1rem', color: isPendingWeight ? '#8b5cf6' : (isCompleted ? '#16a34a' : '#5b3e84') }}>
-                                {isPendingWeight ? 'TBD' : `₹${(order.totalAmount || 0).toLocaleString('en-IN')}`}
+                            <tr style={{ background: 'linear-gradient(to right, rgba(91,62,132,0.05), rgba(91,62,132,0.1))' }}>
+                              <td colSpan={4} style={{ padding: '1.5rem 1.25rem', textAlign: 'right', fontWeight: 800, color: 'var(--color-text)', fontSize: '1rem' }}>Final Order Value</td>
+                              <td style={{ padding: '1.5rem 1.25rem', textAlign: 'right', fontWeight: 900, fontSize: '1.4rem', color: isPendingWeight ? '#8b5cf6' : (isCompleted ? '#16a34a' : 'var(--color-primary)'), letterSpacing: '-0.02em' }}>
+                                {isPendingWeight ? 'TBD' : (() => {
+                                  return `₹${(order.totalAmount || 0).toLocaleString('en-IN')}`;
+                                })()}
                               </td>
                             </tr>
                           </tfoot>
@@ -454,18 +561,14 @@ export default function ProfilePage({ user, onBack, onLogout }) {
             })}
           </div>
         )}
-
-
       </div>
 
       <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @media (max-width: 600px) {
-          .profile-stats-grid { grid-template-columns: 1fr !important; }
-        }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spinner { border: 3px solid rgba(91,62,132,0.1); border-top: 3px solid var(--color-primary); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        .spinner-lg { width: 40px; height: 40px; border-width: 4px; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </div>
   );

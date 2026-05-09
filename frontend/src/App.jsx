@@ -92,7 +92,7 @@ function App() {
   const [activeServiceId, setActiveServiceId] = useState(null);
   const [showSubConflictWarning, setShowSubConflictWarning] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  const [orderDetails, setOrderDetails] = useState(() => JSON.parse(localStorage.getItem(activeScheduleStorage.orderDetails)) || { address: '', time: '', service: '' });
+  const [orderDetails, setOrderDetails] = useState(() => JSON.parse(localStorage.getItem(activeScheduleStorage.orderDetails)) || { address: '', contactNumber: '', time: '', service: '' });
   const [selectedPlan, setSelectedPlan] = useState(() => {
     if (isSubscriptionSchedule) {
       return JSON.parse(localStorage.getItem(activeScheduleStorage.selectedPlan)) || JSON.parse(localStorage.getItem('selectedPlan')) || null;
@@ -201,7 +201,7 @@ function App() {
         selectionQuantities: {},
         selectedServiceIds: [],
         orderStep: 1,
-        orderDetails: { address: '', time: '', service: '' }
+        orderDetails: { address: '', contactNumber: '', time: '', service: '' }
       };
       await axios.put('/api/auth/draft-order', { draftOrder: emptyDraft }, { withCredentials: true });
     } catch (err) {
@@ -240,7 +240,24 @@ function App() {
   };
 
   const calculateTotal = () => {
-    return cart.reduce((sum, item) => sum + item.total, 0);
+    let sum = cart.reduce((acc, item) => acc + (item.total || 0), 0);
+    
+    // Include base price for Global services if they don't already contribute to the total
+    const uniqueServices = [...new Set(cart.map(i => i.service))];
+    uniqueServices.forEach(serviceName => {
+      const svc = services.find(s => s.name === serviceName);
+      if (svc?.type === 'Global' || svc?.unit === 'kg') {
+        const contributesAlready = cart.some(i => i.service === serviceName && i.total > 0);
+        if (!contributesAlready) {
+          const sub = getMatchingCoverage(serviceName);
+          const isCovered = sub && sub.used < sub.totalLimit;
+          if (!isCovered) {
+            sum += (svc.basePrice || 0);
+          }
+        }
+      }
+    });
+    return sum;
   };
 
   const mergeCartItems = (existingCart, incomingItems) => {
@@ -367,6 +384,7 @@ function App() {
       const payload = {
         items: cart,
         address: orderDetails.address,
+        contactNumber: orderDetails.contactNumber,
         time: orderDetails.time,
         totalAmount,
         subscriptionApplied: subItems.length > 0,
@@ -374,7 +392,7 @@ function App() {
       };
       const response = await axios.post('/api/orders', payload, { withCredentials: true });
       if (response.data.success) {
-        alert(`Success! Our concierge will arrive for your pickup during ${orderDetails.time}.`);
+        alert(`Success! We will arrive for your pickup during ${orderDetails.time}.`);
         
         // Clear everything
         clearDraftOrder();
@@ -841,10 +859,10 @@ function App() {
                           id: Date.now(),
                           product: activeService.name,
                           service: activeService.name,
-                          quantity: 0,
+                          quantity: 1,
                           unit: 'kg',
                           price: (isCovered && !isLimitExceeded) ? 0 : activeService.basePrice,
-                          total: 0,
+                          total: (isCovered && !isLimitExceeded) ? 0 : activeService.basePrice,
                           subscriptionApplied: isCovered && !isLimitExceeded,
                         };
                         setCart(prev => mergeCartItems(prev, newItem));
@@ -977,6 +995,9 @@ function App() {
                             <div className="selected-items-actions">
                               <div style={{ fontWeight: 900, fontSize: 'clamp(1.2rem, 4vw, 1.5rem)' }}>
                                 {(isCovered && !isLimitExceeded) ? '₹0 (Covered)' : (() => {
+                                  if (activeService.unit === "kg" || activeService.type === "Global") {
+                                    return `Rs. ${activeService.basePrice}/kg`;
+                                  }
                                   const total = Object.entries(selectionQuantities).reduce((acc, [id, qty]) => {
                                     const p = activeServiceProducts.find(prod => prod._id === id);
                                     return acc + (p?.servicePrice || 0) * qty;
@@ -1022,70 +1043,101 @@ function App() {
 
               const renderCartContent = () => {
                 if (cart.length === 0) return null;
+                const grouped = cart.reduce((acc, item) => {
+                  if (!acc[item.service]) acc[item.service] = [];
+                  acc[item.service].push(item);
+                  return acc;
+                }, {});
+
                 return (
                   <div className="fade-in" style={{ marginTop: '2.5rem' }}>
                     <h4 style={{ color: 'var(--color-primary)', fontWeight: 800, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <Shirt size={20} /> Your Bag ({cart.length} {cart.length === 1 ? 'item' : 'items'})
                     </h4>
-                    <div style={{ overflowX: 'auto', borderRadius: '16px', border: '1px solid rgba(91,62,132,0.1)', background: 'rgba(255,255,255,0.02)' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                          <tr style={{ background: 'rgba(91,62,132,0.05)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            <th style={{ padding: '1rem', textAlign: 'left' }}>Item</th>
-                            <th style={{ padding: '1rem', textAlign: 'center' }}>Qty</th>
-                            <th style={{ padding: '1rem', textAlign: 'right' }}>Price</th>
-                            <th style={{ padding: '1rem', width: '50px' }}></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                           {cart.map(item => {
-                            const svc = services.find(s => s.name === item.service);
-                            const isSubUsed = item.subscriptionApplied;
-                            return (
-                              <tr key={item.id} style={{ borderTop: '1px solid rgba(91,62,132,0.05)' }}>
-                                <td style={{ padding: '1rem' }}>
-                                  <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                    {item.product}
-                                    {isSubUsed && (
-                                      <span style={{
-                                        fontSize: '0.65rem', fontWeight: 900, background: 'rgba(91,62,132,0.12)',
-                                        color: 'var(--color-primary)', padding: '0.15rem 0.6rem', borderRadius: '100px',
-                                        border: '1px solid rgba(91,62,132,0.2)', letterSpacing: '0.04em',
-                                        textTransform: 'uppercase'
-                                      }}>⚡ Covered</span>
-                                    )}
-                                  </div>
-                                  <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{item.service}</div>
-                                </td>
-                                <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 700 }}>{item.quantity || '—'}</td>
-                                <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 800, color: isSubUsed ? 'var(--color-primary)' : 'inherit' }}>
-                                  {(() => {
-                                    if (item.unit === 'plan' || item.isPlanItem) {
-                                      return `Rs. ${item.total}`;
-                                    }
-                                    if (item.unit === 'kg' || svc?.type === 'Global') {
-                                      return isSubUsed ? '₹0/kg ✓' : `Rs. ${svc?.basePrice || item.price}/kg`;
-                                    }
-                                    return isSubUsed ? '₹0 ✓' : `Rs. ${item.total}`;
-                                  })()}
-                                </td>
-                                <td style={{ padding: '1rem', textAlign: 'center' }}>
-                                  <button onClick={() => setCart(cart.filter(i => i.id !== item.id))} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><X size={18} /></button>
-                                </td>
+                    
+                    {Object.entries(grouped).map(([serviceName, items]) => {
+                      const svc = services.find(s => s.name === serviceName);
+                      return (
+                        <div key={serviceName} style={{ 
+                          marginBottom: '1.5rem', 
+                          borderRadius: '16px', 
+                          border: '1px solid rgba(91,62,132,0.1)', 
+                          background: 'rgba(255,255,255,0.02)',
+                          overflow: 'hidden'
+                        }}>
+                          <div style={{ 
+                            background: 'rgba(91,62,132,0.05)', 
+                            padding: '0.7rem 1.25rem', 
+                            borderBottom: '1px solid rgba(91,62,132,0.05)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <span style={{ fontWeight: 900, color: 'var(--color-primary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{serviceName}</span>
+                            {svc?.type === 'Global' && <span style={{ fontSize: '0.65rem', color: '#b6a3ce', fontWeight: 600 }}>Weight-based Service</span>}
+                          </div>
+                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                              <tr style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#b6a3ce', borderBottom: '1px solid rgba(91,62,132,0.05)' }}>
+                                <th style={{ padding: '0.8rem 1.25rem', textAlign: 'left' }}>Item</th>
+                                <th style={{ padding: '0.8rem 1.25rem', textAlign: 'center' }}>Qty</th>
+                                <th style={{ padding: '0.8rem 1.25rem', textAlign: 'right' }}>Price</th>
+                                <th style={{ padding: '0.8rem 1.25rem', width: '50px' }}></th>
                               </tr>
-                            );
-                          })}
-                          <tr style={{ background: 'rgba(91,62,132,0.03)', fontWeight: 700, fontSize: '0.9rem' }}>
-                            <td colSpan="4" style={{ padding: '1.25rem', textAlign: 'center', color: 'var(--color-primary)' }}>
-                              Total price will be finalised in the review process
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                            </thead>
+                            <tbody>
+                              {items.map(item => {
+                                const isSubUsed = item.subscriptionApplied;
+                                return (
+                                  <tr key={item.id} style={{ borderBottom: '1px solid rgba(91,62,132,0.03)' }}>
+                                    <td style={{ padding: '1rem 1.25rem' }}>
+                                      <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                        {item.product}
+                                        {isSubUsed && (
+                                          <span style={{
+                                            fontSize: '0.6rem', fontWeight: 900, background: 'rgba(91,62,132,0.12)',
+                                            color: 'var(--color-primary)', padding: '0.15rem 0.6rem', borderRadius: '100px',
+                                            textTransform: 'uppercase'
+                                          }}>⚡ Covered</span>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: '1rem 1.25rem', textAlign: 'center', fontWeight: 700 }}>{item.quantity || '—'}</td>
+                                    <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontWeight: 800, color: isSubUsed ? 'var(--color-primary)' : 'inherit' }}>
+                                      {(() => {
+                                        if (item.unit === 'plan' || item.isPlanItem) return `Rs. ${item.total}`;
+                                        if (item.unit === 'kg' || svc?.type === 'Global') return isSubUsed ? '₹0/kg ✓' : `Rs. ${svc?.basePrice || item.price}/kg`;
+                                        return isSubUsed ? '₹0 ✓' : `Rs. ${item.total}`;
+                                      })()}
+                                    </td>
+                                    <td style={{ padding: '1rem 1.25rem', textAlign: 'center' }}>
+                                      <button onClick={() => setCart(cart.filter(i => i.id !== item.id))} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><X size={18} /></button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })}
+                    
+                    <div style={{ 
+                      marginTop: '2rem', 
+                      padding: '1.25rem', 
+                      background: 'rgba(91,62,132,0.03)', 
+                      borderRadius: '16px', 
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: 'var(--color-primary)',
+                      border: '1px solid rgba(91,62,132,0.05)'
+                    }}>
+                      Total price will be finalised in the review process
                     </div>
                   </div>
                 );
               };
+
 
               return (
                 <div className="fade-in">
@@ -1108,9 +1160,13 @@ function App() {
             {orderStep === 2 && (
               <div className="fade-in">
                 <h3>Pickup Address</h3>
-                <div className="input-group" style={{ marginBottom: '1rem' }}>
+                <div className="input-group" style={{ marginBottom: '1.5rem' }}>
                   <label className="form-label">Street Address</label>
-                  <textarea className="form-input" style={{ minHeight: '120px' }} value={orderDetails.address} onChange={(e) => setOrderDetails({ ...orderDetails, address: e.target.value })} placeholder="Enter your full pickup & delivery address..." />
+                  <textarea className="form-input" style={{ minHeight: '100px' }} value={orderDetails.address} onChange={(e) => setOrderDetails({ ...orderDetails, address: e.target.value })} placeholder="Enter your full pickup & delivery address..." />
+                </div>
+                <div className="input-group" style={{ marginBottom: '1.5rem' }}>
+                  <label className="form-label">Contact Number</label>
+                  <input type="tel" className="form-input" value={orderDetails.contactNumber || ''} onChange={(e) => setOrderDetails({ ...orderDetails, contactNumber: e.target.value })} placeholder="Enter your 10-digit mobile number..." />
                 </div>
               </div>
             )}
@@ -1137,14 +1193,19 @@ function App() {
                     <span className="summary-label">Items</span>
                     <span className="summary-value" style={{ textAlign: "right" }}>{cart.length} item(s)</span>
                   </div>
-                  <div className="summary-row" style={{ borderTop: "1px solid var(--color-border)", paddingTop: "1rem", marginTop: "0.5rem", justifyContent: 'center' }}>
-                    <span className="summary-value" style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>
-                      Total price will be finaled in review process
+                  <div className="summary-row" style={{ borderTop: "1px solid var(--color-border)", paddingTop: "1rem", marginTop: "0.5rem" }}>
+                    <span className="summary-label" style={{ fontWeight: 800 }}>Estimated Total</span>
+                    <span className="summary-value" style={{ color: 'var(--color-primary)', fontWeight: 900, fontSize: '1.25rem' }}>
+                      Rs. {calculateTotal()}
                     </span>
                   </div>
                   <div className="summary-row">
                     <span className="summary-label">Address</span>
                     <span className="summary-value" style={{ textAlign: 'right', maxWidth: '60%' }}>{orderDetails.address}</span>
+                  </div>
+                  <div className="summary-row">
+                    <span className="summary-label">Contact</span>
+                    <span className="summary-value">{orderDetails.contactNumber}</span>
                   </div>
                   <div className="summary-row">
                     <span className="summary-label">Pickup Time</span>
@@ -1180,10 +1241,10 @@ function App() {
                               id: Date.now() + Math.random(),
                               product: 'Bulk/Weight',
                               service: s.name,
-                              quantity: 0,
+                              quantity: 1,
                               unit: 'kg',
                               price: isSubApplied ? 0 : s.basePrice,
-                              total: 0,
+                              total: isSubApplied ? 0 : s.basePrice,
                               subscriptionApplied: !!isSubApplied
                             };
                           });
@@ -1195,8 +1256,8 @@ function App() {
                     setOrderStep(orderStep + 1);
                   }}
                   disabled={
-                    (orderStep === 1 && selectedServices.length === 0) ||
-                    (orderStep === 2 && !orderDetails.address.trim()) ||
+                    (orderStep === 1 && selectedServices.length === 0 && cart.length === 0) ||
+                    (orderStep === 2 && (!orderDetails.address.trim() || !orderDetails.contactNumber.trim())) ||
                     (orderStep === 3 && !orderDetails.time)
                   }
                 >Next Step</button>
@@ -1366,10 +1427,10 @@ function App() {
                           id: Date.now(),
                           product: activeService.name,
                           service: activeService.name,
-                          quantity: 0, // Weight determined at pickup
+                          quantity: 1, // Weight determined at pickup, default to 1 unit
                           unit: 'kg',
                           price: (isCovered && !isLimitExceeded) ? 0 : activeService.basePrice,
-                          total: 0,
+                          total: (isCovered && !isLimitExceeded) ? 0 : activeService.basePrice,
                           subscriptionApplied: isCovered && !isLimitExceeded,
                         };
                         setCart(prev => mergeCartItems(prev, newItem));
@@ -1502,6 +1563,9 @@ function App() {
                             <div className="selected-items-actions">
                               <div style={{ fontWeight: 900, fontSize: '1.5rem' }}>
                                 {(isCovered && !isLimitExceeded) ? '₹0 (Covered)' : (() => {
+                                  if (activeService.unit === "kg" || activeService.type === "Global") {
+                                    return `Rs. ${activeService.basePrice}/kg`;
+                                  }
                                   const total = Object.entries(selectionQuantities).reduce((acc, [id, qty]) => {
                                     const p = activeServiceProducts.find(prod => prod._id === id);
                                     return acc + (p?.servicePrice || 0) * qty;
@@ -1541,70 +1605,101 @@ function App() {
 
               const renderCartContent = () => {
                 if (cart.length === 0) return null;
+                const grouped = cart.reduce((acc, item) => {
+                  if (!acc[item.service]) acc[item.service] = [];
+                  acc[item.service].push(item);
+                  return acc;
+                }, {});
+
                 return (
                   <div className="fade-in" style={{ marginTop: '2.5rem' }}>
                     <h4 style={{ color: 'var(--color-primary)', fontWeight: 800, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <Shirt size={20} /> Your Bag ({cart.length} {cart.length === 1 ? 'item' : 'items'})
                     </h4>
-                    <div style={{ overflowX: 'auto', borderRadius: '16px', border: '1px solid rgba(91,62,132,0.1)', background: 'rgba(255,255,255,0.02)' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                          <tr style={{ background: 'rgba(91,62,132,0.05)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            <th style={{ padding: '1rem', textAlign: 'left' }}>Item</th>
-                            <th style={{ padding: '1rem', textAlign: 'center' }}>Qty</th>
-                            <th style={{ padding: '1rem', textAlign: 'right' }}>Price</th>
-                            <th style={{ padding: '1rem', width: '50px' }}></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                           {cart.map(item => {
-                            const svc = services.find(s => s.name === item.service);
-                            const isSubUsed = item.subscriptionApplied;
-                            return (
-                              <tr key={item.id} style={{ borderTop: '1px solid rgba(91,62,132,0.05)' }}>
-                                <td style={{ padding: '1rem' }}>
-                                  <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                    {item.product}
-                                    {isSubUsed && (
-                                      <span style={{
-                                        fontSize: '0.65rem', fontWeight: 900, background: 'rgba(91,62,132,0.12)',
-                                        color: 'var(--color-primary)', padding: '0.15rem 0.6rem', borderRadius: '100px',
-                                        border: '1px solid rgba(91,62,132,0.2)', letterSpacing: '0.04em',
-                                        textTransform: 'uppercase'
-                                      }}>⚡ Covered</span>
-                                    )}
-                                  </div>
-                                  <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{item.service}</div>
-                                </td>
-                                <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 700 }}>{item.quantity || '—'}</td>
-                                <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 800, color: isSubUsed ? 'var(--color-primary)' : 'inherit' }}>
-                                  {(() => {
-                                    if (item.unit === 'plan' || item.isPlanItem) {
-                                      return `Rs. ${item.total}`;
-                                    }
-                                    if (item.unit === 'kg' || svc?.type === 'Global') {
-                                      return isSubUsed ? '₹0/kg ✓' : `Rs. ${svc?.basePrice || item.price}/kg`;
-                                    }
-                                    return isSubUsed ? '₹0 ✓' : `Rs. ${item.total}`;
-                                  })()}
-                                </td>
-                                <td style={{ padding: '1rem', textAlign: 'center' }}>
-                                  <button onClick={() => setCart(cart.filter(i => i.id !== item.id))} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><X size={18} /></button>
-                                </td>
+                    
+                    {Object.entries(grouped).map(([serviceName, items]) => {
+                      const svc = services.find(s => s.name === serviceName);
+                      return (
+                        <div key={serviceName} style={{ 
+                          marginBottom: '1.5rem', 
+                          borderRadius: '16px', 
+                          border: '1px solid rgba(91,62,132,0.1)', 
+                          background: 'rgba(255,255,255,0.02)',
+                          overflow: 'hidden'
+                        }}>
+                          <div style={{ 
+                            background: 'rgba(91,62,132,0.05)', 
+                            padding: '0.7rem 1.25rem', 
+                            borderBottom: '1px solid rgba(91,62,132,0.05)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <span style={{ fontWeight: 900, color: 'var(--color-primary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{serviceName}</span>
+                            {svc?.type === 'Global' && <span style={{ fontSize: '0.65rem', color: '#b6a3ce', fontWeight: 600 }}>Weight-based Service</span>}
+                          </div>
+                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                              <tr style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#b6a3ce', borderBottom: '1px solid rgba(91,62,132,0.05)' }}>
+                                <th style={{ padding: '0.8rem 1.25rem', textAlign: 'left' }}>Item</th>
+                                <th style={{ padding: '0.8rem 1.25rem', textAlign: 'center' }}>Qty</th>
+                                <th style={{ padding: '0.8rem 1.25rem', textAlign: 'right' }}>Price</th>
+                                <th style={{ padding: '0.8rem 1.25rem', width: '50px' }}></th>
                               </tr>
-                            );
-                          })}
-                          <tr style={{ background: 'rgba(91,62,132,0.03)', fontWeight: 700, fontSize: '0.9rem' }}>
-                            <td colSpan="4" style={{ padding: '1.25rem', textAlign: 'center', color: 'var(--color-primary)' }}>
-                              Total price will be finalised in the review process
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                            </thead>
+                            <tbody>
+                              {items.map(item => {
+                                const isSubUsed = item.subscriptionApplied;
+                                return (
+                                  <tr key={item.id} style={{ borderBottom: '1px solid rgba(91,62,132,0.03)' }}>
+                                    <td style={{ padding: '1rem 1.25rem' }}>
+                                      <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                        {item.product}
+                                        {isSubUsed && (
+                                          <span style={{
+                                            fontSize: '0.6rem', fontWeight: 900, background: 'rgba(91,62,132,0.12)',
+                                            color: 'var(--color-primary)', padding: '0.15rem 0.6rem', borderRadius: '100px',
+                                            textTransform: 'uppercase'
+                                          }}>⚡ Covered</span>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: '1rem 1.25rem', textAlign: 'center', fontWeight: 700 }}>{item.quantity || '—'}</td>
+                                    <td style={{ padding: '1rem 1.25rem', textAlign: 'right', fontWeight: 800, color: isSubUsed ? 'var(--color-primary)' : 'inherit' }}>
+                                      {(() => {
+                                        if (item.unit === 'plan' || item.isPlanItem) return `Rs. ${item.total}`;
+                                        if (item.unit === 'kg' || svc?.type === 'Global') return isSubUsed ? '₹0/kg ✓' : `Rs. ${svc?.basePrice || item.price}/kg`;
+                                        return isSubUsed ? '₹0 ✓' : `Rs. ${item.total}`;
+                                      })()}
+                                    </td>
+                                    <td style={{ padding: '1rem 1.25rem', textAlign: 'center' }}>
+                                      <button onClick={() => setCart(cart.filter(i => i.id !== item.id))} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><X size={18} /></button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })}
+                    
+                    <div style={{ 
+                      marginTop: '2rem', 
+                      padding: '1.25rem', 
+                      background: 'rgba(91,62,132,0.03)', 
+                      borderRadius: '16px', 
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: 'var(--color-primary)',
+                      border: '1px solid rgba(91,62,132,0.05)'
+                    }}>
+                      Total price will be finalised in the review process
                     </div>
                   </div>
                 );
               };
+
 
               return (
                 <div className="fade-in">
@@ -1627,9 +1722,13 @@ function App() {
             {orderStep === 2 && (
               <div className="fade-in">
                 <h3>Pickup Address</h3>
-                <div className="input-group" style={{ marginBottom: '1rem' }}>
+                <div className="input-group" style={{ marginBottom: '1.5rem' }}>
                   <label className="form-label">Street Address</label>
-                  <textarea className="form-input" style={{ minHeight: '120px' }} value={orderDetails.address} onChange={(e) => setOrderDetails({ ...orderDetails, address: e.target.value })} placeholder="Enter your full pickup & delivery address..." />
+                  <textarea className="form-input" style={{ minHeight: '100px' }} value={orderDetails.address} onChange={(e) => setOrderDetails({ ...orderDetails, address: e.target.value })} placeholder="Enter your full pickup & delivery address..." />
+                </div>
+                <div className="input-group" style={{ marginBottom: '1.5rem' }}>
+                  <label className="form-label">Contact Number</label>
+                  <input type="tel" className="form-input" value={orderDetails.contactNumber || ''} onChange={(e) => setOrderDetails({ ...orderDetails, contactNumber: e.target.value })} placeholder="Enter your 10-digit mobile number..." />
                 </div>
               </div>
             )}
@@ -1656,14 +1755,19 @@ function App() {
                     <span className="summary-label">Items</span>
                     <span className="summary-value" style={{ textAlign: "right" }}>{cart.length} item(s)</span>
                   </div>
-                  <div className="summary-row" style={{ borderTop: "1px solid var(--color-border)", paddingTop: "1rem", marginTop: "0.5rem", justifyContent: 'center' }}>
-                    <span className="summary-value" style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>
-                      Total price will be finaled in review process
+                  <div className="summary-row" style={{ borderTop: "1px solid var(--color-border)", paddingTop: "1rem", marginTop: "0.5rem" }}>
+                    <span className="summary-label" style={{ fontWeight: 800 }}>Estimated Total</span>
+                    <span className="summary-value" style={{ color: 'var(--color-primary)', fontWeight: 900, fontSize: '1.25rem' }}>
+                      Rs. {calculateTotal()}
                     </span>
                   </div>
                   <div className="summary-row">
                     <span className="summary-label">Address</span>
                     <span className="summary-value" style={{ textAlign: 'right', maxWidth: '60%' }}>{orderDetails.address}</span>
+                  </div>
+                  <div className="summary-row">
+                    <span className="summary-label">Contact</span>
+                    <span className="summary-value">{orderDetails.contactNumber}</span>
                   </div>
                   <div className="summary-row">
                     <span className="summary-label">Pickup Time</span>
@@ -1716,8 +1820,8 @@ function App() {
                     setOrderStep(orderStep + 1);
                   }}
                   disabled={
-                    (orderStep === 1 && selectedServices.length === 0) ||
-                    (orderStep === 2 && !orderDetails.address.trim()) ||
+                    (orderStep === 1 && selectedServices.length === 0 && cart.length === 0) ||
+                    (orderStep === 2 && (!orderDetails.address.trim() || !orderDetails.contactNumber.trim())) ||
                     (orderStep === 3 && !orderDetails.time)
                   }
                 >Next Step</button>

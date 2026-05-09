@@ -28,6 +28,13 @@ const userSchema = new mongoose.Schema({
     selectedServiceIds: { type: Array, default: [] },
     orderStep: { type: Number, default: 1 },
     orderDetails: { type: Object, default: { address: '', time: '', service: '' } }
+  },
+  subscriptionDraftOrder: {
+    cart: { type: Array, default: [] },
+    selectionQuantities: { type: Object, default: {} },
+    selectedServiceIds: { type: Array, default: [] },
+    orderStep: { type: Number, default: 1 },
+    orderDetails: { type: Object, default: { address: '', time: '', service: '' } }
   }
 });
 

@@ -80,7 +80,11 @@ router.put('/draft-order', async (req, res) => {
     const user = await User.findById(decoded.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
     
-    user.draftOrder = req.body.draftOrder;
+    if (req.body.isSubscription) {
+      user.subscriptionDraftOrder = req.body.draftOrder;
+    } else {
+      user.draftOrder = req.body.draftOrder;
+    }
     await user.save();
     
     res.json({ message: 'Draft order saved successfully' });

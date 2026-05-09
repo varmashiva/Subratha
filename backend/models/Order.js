@@ -22,16 +22,24 @@ const orderSchema = new mongoose.Schema({
     },
     unit: {
       type: String,
-      enum: ['pcs', 'kg'],
+      enum: ['pcs', 'kg', 'plan'],
       default: 'pcs'
     },
     price: {
       type: Number,
       required: false // Made optional for kg-based services initially
     },
+    weight: {
+      type: Number,
+      default: 0
+    },
     total: {
       type: Number,
       required: false // Made optional for kg-based services initially
+    },
+    subscriptionApplied: {
+      type: Boolean,
+      default: false
     }
   }],
   totalAmount: {
@@ -40,6 +48,10 @@ const orderSchema = new mongoose.Schema({
     default: 0
   },
   address: {
+    type: String,
+    required: true
+  },
+  contactNumber: {
     type: String,
     required: true
   },

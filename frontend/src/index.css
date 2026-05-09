@@ -1323,8 +1323,8 @@ p {
 .step-item.active .step-circle {
   border-color: var(--color-primary);
   color: var(--color-primary);
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+  background: var(--color-bg);
+  box-shadow: 0 0 15px rgba(91, 62, 132, 0.1);
 }
 
 .step-item.completed .step-circle {
@@ -1867,6 +1867,28 @@ p {
 .adm-icon-btn.success:hover{ background: rgba(39,174,96,0.15); }
 .adm-icon-btn.danger       { color: #e74c3c; border-color: #c0392b; }
 .adm-icon-btn.danger:hover { background: rgba(231,76,60,0.15); }
+
+.adm-input {
+  background: #fff;
+  border: 1.5px solid rgba(91, 62, 132, 0.15);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  color: #5b3e84;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.adm-input:focus {
+  border-color: #5b3e84;
+  box-shadow: 0 0 0 3px rgba(91, 62, 132, 0.1);
+}
+
+.active-row {
+  background: rgba(91, 62, 132, 0.03) !important;
+}
 
 .adm-add-row {
   display: flex;

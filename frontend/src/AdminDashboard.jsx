@@ -74,6 +74,7 @@ function OrdersTab() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [tempWeights, setTempWeights] = useState({});
+  const [services, setServices] = useState([]);
 
   const fetchOrders = async () => {
     try {
@@ -82,7 +83,17 @@ function OrdersTab() {
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  const fetchServices = async () => {
+    try {
+      const { data } = await axios.get(`${API_URL}/services`);
+      setServices(data);
+    } catch (err) { console.error(err); }
+  };
+
+  useEffect(() => { 
+    fetchOrders(); 
+    fetchServices();
+  }, []);
 
   const updateStatus = async (id, newStatus) => {
     setActionLoading(true);
@@ -101,15 +112,69 @@ function OrdersTab() {
       fetchOrders();
       setExpanded(null);
       setTempWeights(prev => ({ ...prev, [id]: undefined }));
-    } catch (err) { alert('Error updating weights'); } finally { setActionLoading(false); }
+    } catch (err) { alert('Error updating order items'); } finally { setActionLoading(false); }
   };
 
-  const handleWeightChange = (orderId, itemId, newWeight) => {
+  const handleQuantityChange = (orderId, itemId, newQty) => {
     setTempWeights(prev => {
       const currentOrder = orders.find(o => o._id === orderId);
       if (!currentOrder) return prev;
-      const items = prev[orderId] || currentOrder.items.map(i => ({ _id: i._id, quantity: i.quantity }));
-      const updatedItems = items.map(i => i._id === itemId ? { ...i, quantity: parseFloat(newWeight) || 0 } : i);
+      const items = prev[orderId] || currentOrder.items.map(i => ({ ...i, weight: i.weight || 0 }));
+      const updatedItems = items.map(i => i._id === itemId ? { ...i, quantity: parseFloat(newQty) || 0 } : i);
+      return { ...prev, [orderId]: updatedItems };
+    });
+  };
+
+  const handlePriceChange = (orderId, itemId, newPrice) => {
+    setTempWeights(prev => {
+      const currentOrder = orders.find(o => o._id === orderId);
+      if (!currentOrder) return prev;
+      const items = prev[orderId] || currentOrder.items.map(i => ({ ...i, weight: i.weight || 0 }));
+      const updatedItems = items.map(i => i._id === itemId ? { ...i, price: parseFloat(newPrice) || 0 } : i);
+      return { ...prev, [orderId]: updatedItems };
+    });
+  };
+
+  const handleWeightUpdate = (orderId, itemId, newWeight) => {
+    setTempWeights(prev => {
+      const currentOrder = orders.find(o => o._id === orderId);
+      if (!currentOrder) return prev;
+      const items = prev[orderId] || currentOrder.items.map(i => ({ ...i, weight: i.weight || 0 }));
+      const updatedItems = items.map(i => i._id === itemId ? { ...i, weight: parseFloat(newWeight) || 0 } : i);
+      return { ...prev, [orderId]: updatedItems };
+    });
+  };
+
+  const handleGroupWeightUpdate = (orderId, serviceName, newWeight) => {
+    setTempWeights(prev => {
+      const currentOrder = orders.find(o => o._id === orderId);
+      if (!currentOrder) return prev;
+      const items = prev[orderId] || currentOrder.items.map(i => ({ ...i, weight: i.weight || 0 }));
+      const serviceItems = items.filter(i => i.service === serviceName);
+      const updatedItems = items.map(i => {
+        if (i.service === serviceName) {
+          if (i._id === serviceItems[0]._id) return { ...i, weight: parseFloat(newWeight) || 0 };
+          return { ...i, weight: 0 };
+        }
+        return i;
+      });
+      return { ...prev, [orderId]: updatedItems };
+    });
+  };
+
+  const handleGroupPriceUpdate = (orderId, serviceName, newPrice) => {
+    setTempWeights(prev => {
+      const currentOrder = orders.find(o => o._id === orderId);
+      if (!currentOrder) return prev;
+      const items = prev[orderId] || currentOrder.items.map(i => ({ ...i, weight: i.weight || 0 }));
+      const serviceItems = items.filter(i => i.service === serviceName);
+      const updatedItems = items.map(i => {
+        if (i.service === serviceName) {
+          if (i._id === serviceItems[0]._id) return { ...i, price: parseFloat(newPrice) || 0 };
+          return { ...i, price: 0 };
+        }
+        return i;
+      });
       return { ...prev, [orderId]: updatedItems };
     });
   };
@@ -146,30 +211,323 @@ function OrdersTab() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(o => (
-              <tr key={o._id}>
-                <td style={{ fontSize: '0.75rem', opacity: 0.6 }}>{o._id.substring(0, 8)}</td>
-                <td>
-                  <div style={{ fontWeight: 600 }}>{o.user?.name || 'Guest'}</div>
-                  <div style={{ fontSize: '0.75rem', opacity: 0.5 }}>{o.user?.email}</div>
-                </td>
-                <td>{o.items?.length || 0}</td>
-                <td style={{ fontWeight: 700 }}>₹{o.totalAmount}</td>
-                <td>
-                  {editing === o._id ? (
-                    <select className="adm-select" style={{ padding: '0.2rem' }} value={o.status} onChange={e => updateStatus(o._id, e.target.value)}>
-                      {['pending', 'picked', 'processing', 'delivered'].map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  ) : <StatusBadge status={o.status.toLowerCase()} />}
-                </td>
-                <td>{new Date(o.createdAt).toLocaleDateString()}</td>
-                <td>
-                  <button className="adm-icon-btn" onClick={() => setEditing(editing === o._id ? null : o._id)}>
-                    {editing === o._id ? <Check size={16} /> : <Edit2 size={16} />}
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {filtered.map(o => {
+              const isExp = expanded === o._id;
+              const isEdit = editing === o._id;
+              
+              return (
+                <React.Fragment key={o._id}>
+                  <tr 
+                    onClick={() => setExpanded(isExp ? null : o._id)}
+                    style={{ cursor: 'pointer', transition: 'background 0.2s' }}
+                    className={isExp ? 'active-row' : ''}
+                  >
+                    <td style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-primary)' }}>#{o._id.substring(0, 8).toUpperCase()}</td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontWeight: 700 }}>{o.user?.name || 'Guest'}</span>
+                        {o.subscriptionApplied && (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                            background: 'linear-gradient(135deg, #7c3aed, #5b3e84)',
+                            color: '#fff', fontSize: '0.6rem', fontWeight: 800,
+                            padding: '0.2rem 0.5rem', borderRadius: '100px',
+                            textTransform: 'uppercase', letterSpacing: '0.05em',
+                            boxShadow: '0 2px 8px rgba(91,62,132,0.35)',
+                          }}>
+                            ⚡ SUB
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{o.user?.email}</div>
+                    </td>
+                    <td>{o.items?.length || 0} items</td>
+                    <td style={{ fontWeight: 900 }}>
+                      {(() => {
+                        if (!tempWeights[o._id]) return `₹${(o.totalAmount || 0).toLocaleString()}`;
+                        
+                        const currentItems = tempWeights[o._id] || o.items || [];
+                        const liveTotal = currentItems.reduce((acc, item) => {
+                          const svc = services.find(s => s.name === item.service);
+                          const rate = item.price || (svc?.type === 'Global' ? svc.basePrice : 0);
+                          return acc + (item.weight > 0 ? (item.weight * rate) : (item.quantity * rate));
+                        }, 0);
+                        return `₹${liveTotal.toLocaleString()}`;
+                      })()}
+                    </td>
+                    <td>
+                      {isEdit ? (
+                        <select 
+                          className="adm-select" 
+                          style={{ padding: '0.3rem', fontSize: '0.75rem' }} 
+                          value={o.status} 
+                          onClick={e => e.stopPropagation()}
+                          onChange={e => updateStatus(o._id, e.target.value)}
+                        >
+                          {['Pending', 'pending_weight', 'Picked', 'Processing', 'Out for Delivery', 'Completed', 'Cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      ) : <StatusBadge status={(o.status || 'pending').toLowerCase()} />}
+                    </td>
+                    <td style={{ fontSize: '0.8rem', fontWeight: 600 }}>{new Date(o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
+                    <td>
+                      <button 
+                        className="adm-icon-btn" 
+                        onClick={(e) => { e.stopPropagation(); setEditing(isEdit ? null : o._id); }}
+                      >
+                        {isEdit ? <Check size={16} /> : <Edit2 size={16} />}
+                      </button>
+                    </td>
+                  </tr>
+                  
+                  {isExp && (
+                    <tr>
+                      <td colSpan="7" style={{ padding: 0, border: 'none' }}>
+                        <div className="fade-in" style={{ 
+                          background: 'rgba(91,62,132,0.02)', 
+                          padding: '2rem', 
+                          borderBottom: '2px solid rgba(91,62,132,0.1)',
+                          boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.02)'
+                        }}>
+                          {/* Order Meta Info */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
+                            <div>
+                              <div style={{ color: '#b6a3ce', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Pickup Address</div>
+                              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#5b3e84' }}>{o.address}</div>
+                            </div>
+                            <div>
+                              <div style={{ color: '#b6a3ce', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Contact Number</div>
+                              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#5b3e84' }}>{o.contactNumber}</div>
+                            </div>
+                            <div>
+                              <div style={{ color: '#b6a3ce', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Scheduled Slot</div>
+                              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#5b3e84' }}>{o.pickupTime}</div>
+                            </div>
+                          </div>
+
+                          {/* Items Table */}
+                          <div style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(91,62,132,0.1)' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                              <thead>
+                                <tr style={{ background: 'rgba(91,62,132,0.05)', color: '#b6a3ce', fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 800 }}>
+                                  <th style={{ padding: '1rem', textAlign: 'left' }}>Item Detail</th>
+                                  <th style={{ padding: '1rem', textAlign: 'center' }}>QTY</th>
+                                  <th style={{ padding: '1rem', textAlign: 'center' }}>WT</th>
+                                  <th style={{ padding: '1rem', textAlign: 'right' }}>Rate</th>
+                                  <th style={{ padding: '1rem', textAlign: 'right' }}>Total</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(() => {
+                                  const itemsByService = (o.items || []).reduce((acc, item) => {
+                                    if (!acc[item.service]) acc[item.service] = [];
+                                    acc[item.service].push(item);
+                                    return acc;
+                                  }, {});
+
+                                  return Object.entries(itemsByService).map(([serviceName, serviceItems]) => {
+                                    const svcInfo = services.find(s => s.name === serviceName);
+                                    const isGlobalSvc = svcInfo?.type === 'Global';
+                                    
+                                    const currentOrderItems = tempWeights[o._id] || o.items.map(i => ({ _id: i._id, quantity: i.quantity, weight: i.weight || 0, price: i.price, service: i.service }));
+                                    
+                                    // For Global services, we use the first item as the representative for group weight/price
+                                    const firstItem = serviceItems[0];
+                                    const groupEditingItem = currentOrderItems.find(i => i._id === firstItem._id);
+                                    
+                                    const isServiceSubApplied = firstItem?.subscriptionApplied;
+                                    const groupPrice = (groupEditingItem?.price ?? svcInfo?.basePrice ?? 0);
+                                    const totalWeight = groupEditingItem?.weight || 0;
+                                    const subKgDeducted = (isServiceSubApplied && isGlobalSvc) ? (o.subscriptionKgDeducted || 0) : 0;
+                                    const overageKg = Math.max(0, totalWeight - subKgDeducted);
+                                    const isFullyCovered = isServiceSubApplied && isGlobalSvc && overageKg === 0 && totalWeight > 0;
+                                    const serviceTotal = isGlobalSvc
+                                      ? (isServiceSubApplied ? overageKg * groupPrice : totalWeight * groupPrice)
+                                      : serviceItems.reduce((acc, item) => {
+                                          const editingItem = currentOrderItems.find(i => i._id === item._id);
+                                          return acc + ((editingItem?.weight > 0) ? (editingItem.weight * (editingItem.price || 0)) : ((editingItem?.quantity || 0) * (editingItem?.price || 0)));
+                                        }, 0);
+
+                                    return (
+                                      <React.Fragment key={serviceName}>
+                                        <tr style={{ background: isGlobalSvc ? 'rgba(91,62,132,0.08)' : 'rgba(91,62,132,0.04)' }}>
+                                          <td colSpan={isGlobalSvc ? 2 : 4} style={{ padding: '1rem 1.25rem', borderBottom: '2px solid rgba(91,62,132,0.1)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+                                              <div style={{ width: '4px', height: '18px', background: 'var(--color-primary)', borderRadius: '10px' }}></div>
+                                              <span style={{ fontWeight: 900, color: '#5b3e84', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+                                                {serviceName}
+                                              </span>
+                                              {isServiceSubApplied && isGlobalSvc && (
+                                                <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7c3aed', background: '#7c3aed15', border: '1px solid #7c3aed33', padding: '0.15rem 0.5rem', borderRadius: '100px' }}>
+                                                  ⚡ {subKgDeducted}kg free by subscription
+                                                </span>
+                                              )}
+                                            </div>
+                                          </td>
+                                          {isGlobalSvc ? (
+                                            <>
+                                              <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem' }}>
+                                                  <input 
+                                                    type="number" 
+                                                    className="adm-input" 
+                                                    style={{ 
+                                                      width: '85px', textAlign: 'center', padding: '0.5rem',
+                                                      borderRadius: '10px', border: '2px solid var(--color-primary)',
+                                                      background: '#fff', fontWeight: 900, transition: 'all 0.2s',
+                                                      boxShadow: '0 2px 8px rgba(91,62,132,0.1)'
+                                                    }} 
+                                                    value={groupEditingItem?.weight ?? ''} 
+                                                    onChange={e => handleGroupWeightUpdate(o._id, serviceName, e.target.value)}
+                                                  />
+                                                  <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 800 }}>KG</span>
+                                                </div>
+                                                {isServiceSubApplied && totalWeight > 0 && (
+                                                  <div style={{ marginTop: '0.3rem', fontSize: '0.62rem', fontWeight: 700, color: isFullyCovered ? '#16a34a' : '#f59e0b', textAlign: 'center' }}>
+                                                    {isFullyCovered
+                                                      ? `✓ All ${totalWeight}kg covered`
+                                                      : `${subKgDeducted}kg free · ${overageKg}kg chargeable`}
+                                                  </div>
+                                                )}
+                                              </td>
+                                              <td style={{ padding: '1rem', textAlign: 'right' }}>
+                                                {isFullyCovered ? (
+                                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: '#16a34a15', padding: '0.4rem 0.85rem', borderRadius: '100px', border: '1.5px solid #16a34a33' }}>
+                                                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#16a34a' }}>✓ Free</span>
+                                                  </div>
+                                                ) : (
+                                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                      <span style={{ fontSize: '0.9rem', color: '#5b3e84', fontWeight: 800 }}>₹</span>
+                                                      <input 
+                                                        type="number" 
+                                                        className="adm-input" 
+                                                        style={{ 
+                                                          width: '75px', textAlign: 'right', padding: '0.5rem', fontSize: '0.9rem',
+                                                          borderRadius: '10px', border: '1.5px solid rgba(91,62,132,0.1)',
+                                                          background: '#fff', fontWeight: 700
+                                                        }} 
+                                                        value={groupEditingItem?.price ?? svcInfo?.basePrice ?? ''} 
+                                                        onChange={e => handleGroupPriceUpdate(o._id, serviceName, e.target.value)}
+                                                      />
+                                                      <span style={{ fontSize: '0.75rem', fontWeight: 800 }}>/kg</span>
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </td>
+                                              <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 900, color: isFullyCovered ? '#16a34a' : '#5b3e84', fontSize: '1.2rem' }}>
+                                                {isFullyCovered ? '₹0' : `₹${serviceTotal.toLocaleString()}`}
+                                              </td>
+                                            </>
+                                          ) : (
+                                            <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 900, color: '#5b3e84', fontSize: '1.2rem' }}>
+                                              ₹{serviceTotal.toLocaleString()}
+                                            </td>
+                                          )}
+                                        </tr>
+                                        {serviceItems.map(item => {
+                                          const editingItem = currentOrderItems.find(i => i._id === item._id);
+                                          const isKG = item.unit === 'kg';
+                                          
+                                          const itemTotal = (editingItem?.weight > 0) 
+                                            ? (editingItem.weight * (editingItem.price || 0))
+                                            : ((editingItem?.quantity || 0) * (editingItem?.price || 0));
+
+                                          return (
+                                            <tr key={item._id} style={{ borderTop: '1px solid rgba(91,62,132,0.05)', transition: 'background 0.2s' }}>
+                                              <td style={{ padding: '1.25rem 1rem', fontWeight: 700, color: '#5b3e84', fontSize: '1rem' }}>{item.product}</td>
+                                              <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem' }}>
+                                                  <input 
+                                                    type="number" 
+                                                    className="adm-input" 
+                                                    style={{ 
+                                                      width: '65px', textAlign: 'center', padding: '0.5rem',
+                                                      borderRadius: '10px', border: '1.5px solid rgba(91,62,132,0.1)',
+                                                      background: isKG ? 'rgba(91,62,132,0.02)' : '#fff',
+                                                      fontWeight: 700, transition: 'all 0.2s'
+                                                    }} 
+                                                    value={editingItem?.quantity ?? ''} 
+                                                    onChange={e => handleQuantityChange(o._id, item._id, e.target.value)}
+                                                  />
+                                                  <span style={{ fontSize: '0.75rem', color: '#b6a3ce', fontWeight: 800, textTransform: 'uppercase' }}>pcs</span>
+                                                </div>
+                                              </td>
+                                              {!isGlobalSvc && (
+                                                <>
+                                                  <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                                    {isKG ? (
+                                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem' }}>
+                                                        <input 
+                                                          type="number" 
+                                                          className="adm-input" 
+                                                          style={{ 
+                                                            width: '75px', textAlign: 'center', padding: '0.5rem',
+                                                            borderRadius: '10px', border: '2px solid var(--color-primary)',
+                                                            background: '#fff', fontWeight: 700, transition: 'all 0.2s'
+                                                          }} 
+                                                          value={editingItem?.weight ?? ''} 
+                                                          onChange={e => handleWeightUpdate(o._id, item._id, e.target.value)}
+                                                        />
+                                                        <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 800, textTransform: 'uppercase' }}>KG</span>
+                                                      </div>
+                                                    ) : (
+                                                      <span style={{ color: '#b6a3ce', fontWeight: 700 }}>—</span>
+                                                    )}
+                                                  </td>
+                                                  <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 600, color: '#b6a3ce' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                                      <span style={{ fontSize: '0.9rem', color: '#5b3e84', fontWeight: 800 }}>₹</span>
+                                                      <input 
+                                                        type="number" 
+                                                        className="adm-input" 
+                                                        style={{ 
+                                                          width: '65px', textAlign: 'right', padding: '0.5rem', fontSize: '0.9rem',
+                                                          borderRadius: '10px', border: '1.5px solid rgba(91,62,132,0.1)',
+                                                          background: '#fff', fontWeight: 700
+                                                        }} 
+                                                        value={editingItem?.price ?? ''} 
+                                                        onChange={e => handlePriceChange(o._id, item._id, e.target.value)}
+                                                      />
+                                                      <span style={{ fontSize: '0.75rem', fontWeight: 800 }}>/{item.unit}</span>
+                                                    </div>
+                                                  </td>
+                                                  <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 900, color: '#5b3e84', fontSize: '1.1rem' }}>
+                                                    ₹{itemTotal.toLocaleString()}
+                                                  </td>
+                                                </>
+                                              )}
+                                              {isGlobalSvc && <td colSpan="3"></td>}
+                                            </tr>
+                                          );
+                                        })}
+                                      </React.Fragment>
+                                    );
+                                  });
+                                })()}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* Action Footer */}
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem' }}>
+                            {tempWeights[o._id] && (
+                              <button 
+                                className="btn btn-primary" 
+                                style={{ background: '#10b981', border: 'none', padding: '0.6rem 1.5rem' }}
+                                onClick={() => updateItems(o._id)}
+                              >
+                                <Save size={18} style={{ marginRight: '8px' }} /> Save Changes
+                              </button>
+                            )}
+                            <button className="btn btn-secondary" onClick={() => setExpanded(null)}>Close Details</button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -230,9 +588,8 @@ function PricingTab() {
     setActionLoading(true);
     try {
       const existing = products.find(p => p.name.trim().toLowerCase() === prodForm.name.trim().toLowerCase());
-      const isGlobal = services.find(s => s.name === prodForm.serviceName)?.type === 'Global';
       const parsedPrice = parseFloat(prodForm.price);
-      const serviceObj = { name: prodForm.serviceName, price: isGlobal ? 0 : (isNaN(parsedPrice) ? 0 : parsedPrice) };
+      const serviceObj = { name: prodForm.serviceName, price: isNaN(parsedPrice) ? 0 : parsedPrice };
 
       if (existing) {
         const updatedServices = [...existing.services.filter(s => s.name !== prodForm.serviceName), serviceObj];
@@ -374,7 +731,7 @@ function PricingTab() {
                         <tr key={p._id}>
                           <td><strong>{p.name}</strong></td>
                           <td style={{ fontWeight: 700, color: '#5b3e84' }}>
-                            {svc.type === 'Global' ? <span style={{opacity: 0.5}}>- (Included in Global Weight)</span> : `₹${p.price}`}
+                            {p.price > 0 ? `₹${p.price}` : <span style={{opacity: 0.5}}>- (Included in Global Weight)</span>}
                           </td>
                           <td style={{ textAlign: 'right' }}>
                             <button className="adm-icon-btn" onClick={() => { setProdForm({ name: p.name, price: p.price, serviceName: svc.name }); setShowProductModal(true); }}><Edit2 size={14} /></button>
@@ -442,12 +799,10 @@ function PricingTab() {
             <label className="form-label">Product Name</label>
             <input className="input-field" value={prodForm.name} onChange={e => setProdForm({ ...prodForm, name: e.target.value })} placeholder="e.g. Silk Saree" />
           </div>
-          {services.find(s => s.name === prodForm.serviceName)?.type !== 'Global' && (
             <div className="input-group">
               <label className="form-label">Price per Piece (₹)</label>
               <input type="number" className="input-field" value={prodForm.price} onChange={e => setProdForm({ ...prodForm, price: e.target.value })} placeholder="0.00" />
             </div>
-          )}
           <button className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} onClick={saveProduct}>Save Mapping</button>
         </div>
       </Modal>

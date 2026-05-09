@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Centralized API configuration
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://subratha-a013.onrender.com';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 // Configure default axios settings
 axios.defaults.baseURL = API_BASE_URL;
